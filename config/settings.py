@@ -143,26 +143,25 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 # EMAIL CONFIGURATION - PASSWORD RESET
 # ==============================================
 
-# Use console backend (prints to logs, no actual email sending)
-# This is the safest option for now
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# ==============================================
+# EMAIL CONFIGURATION - PASSWORD RESET
+# ==============================================
 
-# Keep these commented out for now
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'othelloinstituteoftechnology@gmail.com')
-# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-# DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'othelloinstituteoftechnology@gmail.com')
-
+# Use SMTP for real email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'othelloinstituteoftechnology@gmail.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'othelloinstituteoftechnology@gmail.com')
 
 # Password reset timeout (24 hours in seconds)
 PASSWORD_RESET_TIMEOUT = 86400
 
-# # Warning if email password not set
-# if not EMAIL_HOST_PASSWORD:
-#     print("⚠️  WARNING: EMAIL_HOST_PASSWORD not set in .env file!")
-#     print("Password reset will not work until you set it.")
+# Warning if email password not set
+if not EMAIL_HOST_PASSWORD:
+    print("⚠️  WARNING: EMAIL_HOST_PASSWORD not set in .env file!")
+    print("Password reset will not work until you set it.")
 
 
