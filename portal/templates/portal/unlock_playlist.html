@@ -1,0 +1,29 @@
+{% extends 'portal/base.html' %}
+{% block content %}
+<div class="dashboard-container">
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <h2>🔓 Unlock Playlist</h2>
+        </div>
+        <a href="{% url 'dashboard' %}" class="logout-btn">← Back to Dashboard</a>
+    </nav>
+    
+    <div class="main-content">
+        <div class="welcome-card">
+            <h1>Unlock: {{ playlist.title }}</h1>
+            <p>Enter the access code provided by your instructor</p>
+        </div>
+        
+        <div class="progress-section">
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Playlist Access Code</label>
+                    <input type="text" name="access_code" required>
+                </div>
+                <button type="submit" class="btn">Unlock Playlist</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

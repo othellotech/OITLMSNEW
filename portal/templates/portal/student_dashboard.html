@@ -1,0 +1,217 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- FIXED NAVIGATION BAR -->
+    <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+        <div class="navbar-brand">
+            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid var(--warm-yellow);">
+            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| Student Dashboard</span></h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <span style="color: var(--navy-blue); font-weight: 500;">👋 {{ user.first_name }} {{ user.last_name }}</span>
+            <a href="{% url 'logout' %}" 
+               class="logout-btn" 
+               style="padding: 0.5rem 1.2rem;"
+               onclick="return confirm('Are you sure you want to logout from Othello Institute of Technology?');">
+               🚪 Logout
+            </a>
+        </div>
+    </nav>
+    
+    <div class="main-content" style="padding-top: 90px;">
+        <div class="welcome-card">
+            <h1>Welcome, {{ user.first_name }}! 👋</h1>
+            {% if has_single_course %}
+                <h2>{{ single_course.course.title }} Track</h2>
+            {% else %}
+                <h2>You are enrolled in {{ total_courses }} course(s)</h2>
+            {% endif %}
+            <p>Continue your learning journey</p>
+        </div>
+        
+        <!-- SINGLE PROGRESS BAR -->
+        <div class="progress-section">
+            <h3>Your Overall Learning Progress</h3>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: {{ overall_progress }}%">
+                    {{ overall_progress }}%
+                </div>
+            </div>
+            <p style="margin-top: 10px; color: #666;">{{ total_completed }} of {{ total_lessons }} lessons completed</p>
+        </div>
+        
+        {% if has_single_course %}
+            <!-- SINGLE COURSE VIEW - Original layout with playlists and referral side by side -->
+            <div style="display: flex; gap: 30px; width: 100%; flex-wrap: wrap; align-items: stretch;">
+                <!-- LEFT SIDE: Playlists -->
+                <div style="flex: 2; min-width: 250px; display: flex; flex-direction: column;">
+                    <h2 style="margin-bottom: 20px;">📚 Your Playlists</h2>
+                    <div class="playlist-grid" style="flex: 1;">
+                        {% for playlist in single_course.playlists %}
+                            <div class="playlist-card {% if playlist.id not in single_course.unlocked_playlists %}locked{% endif %}">
+                                <h3>{{ playlist.title }}</h3>
+                                {% if playlist.id in single_course.unlocked_playlists %}
+                                    <a href="{% url 'playlist_lessons' playlist.id %}" class="unlock-btn">▶️ Start Learning</a>
+                                {% else %}
+                                    <a href="{% url 'unlock_playlist' playlist.id %}" class="unlock-btn">🔓 Unlock with Code</a>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- RIGHT SIDE: Referral Card -->
+                <div style="flex: 1; min-width: 280px; display: flex; flex-direction: column;">
+                    <div style="background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 15px 45px rgba(0,0,0,0.12); height: 100%; display: flex; flex-direction: column;">
+                        
+                        <!-- Color Header with Bold Amount -->
+                        <div style="background: linear-gradient(135deg, #FF6B35, #F7931E); padding: 18px 15px; text-align: center;">
+                            <div style="font-size: 11px; color: rgba(255,255,255,0.9); letter-spacing: 2px; margin-bottom: 4px;">💰 REFER & EARN</div>
+                            <div style="font-size: 38px; font-weight: 900; color: white; line-height: 1.1;">
+                                ₦10,000
+                            </div>
+                            <div style="font-size: 11px; color: rgba(255,255,255,0.9);">per successful referral</div>
+                        </div>
+                        
+                        <!-- Portrait Image -->
+                        <div style="text-align: center; padding: 15px 15px 0 15px; background: white;">
+                            <img src="{% static 'images/refer-earn-portrait.jpg' %}" alt="Refer and Earn" style="width: 140px; height: auto; border-radius: 12px; border: 2px solid #FF6B35; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        </div>
+                        
+                        <!-- Content Section -->
+                        <div style="padding: 15px 15px 20px 15px; flex: 1;">
+                            <!-- Your Referral Name -->
+                            <div style="background: #f8f9fa; padding: 12px; border-radius: 12px; text-align: center; margin-bottom: 15px; border: 1px solid #ffe0b3;">
+                                <div style="font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px;">Your Referral Name</div>
+                                <div id="referralName" style="font-size: 16px; font-weight: 800; color: #0B1F5B; margin: 6px 0; word-break: break-word;">{{ user.first_name }} {{ user.last_name }}</div>
+                                <button onclick="copyReferralName(this)" style="background: #F2C94C; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #0B1F5B;">📋 Copy Name</button>
+                            </div>
+                            <!-- How It Works -->
+                            <div>
+                                <div style="font-weight: 700; color: #0B1F5B; margin-bottom: 12px; font-size: 14px; text-align: center;">⚡ How It Works</div>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="background: #FF6B35; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 12px;">1</div>
+                                        <div style="font-size: 13px; color: #444;">Share <strong>your name</strong> with a friend</div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="background: #FF6B35; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 12px;">2</div>
+                                        <div style="font-size: 13px; color: #444;">They enter <strong>your name</strong> during registration</div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="background: #4caf50; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 12px;">3</div>
+                                        <div style="font-size: 13px; color: #444;">You receive <strong style="color: #FF6B35;">₦10,000</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- No Limit Badge -->
+                            <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #eee;">
+                                <div style="background: #e8f5e9; padding: 8px; border-radius: 8px; text-align: center;">
+                                    <span style="font-size: 11px; color: #2e7d32;">✅ No limit — refer as many friends as you want!</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        {% else %}
+            <!-- MULTIPLE COURSES VIEW - Course cards layout -->
+            <div style="display: flex; gap: 30px; width: 100%; flex-wrap: wrap; align-items: stretch;">
+                <!-- LEFT SIDE: Course Cards -->
+                <div style="flex: 2; min-width: 250px; display: flex; flex-direction: column;">
+                    <h2 style="margin-bottom: 20px;">📚 Your Courses</h2>
+                    <div class="playlist-grid" style="flex: 1;">
+                        {% for course_data in courses_data %}
+                            <div class="playlist-card">
+                                <h3>{{ course_data.course.title }}</h3>
+                                <p style="color: #666; font-size: 14px; margin-bottom: 10px;">{{ course_data.course.description }}</p>
+                                <div style="background: #e0e0e0; border-radius: 10px; overflow: hidden; margin: 10px 0;">
+                                    <div style="background: linear-gradient(90deg, var(--warm-yellow), #f7dc6f); width: {{ course_data.progress }}%; height: 6px;"></div>
+                                </div>
+                                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">{{ course_data.completed }}/{{ course_data.total }} lessons • {{ course_data.progress }}%</p>
+                                <a href="{% url 'course_playlists' course_data.course.id %}" class="unlock-btn">📖 View Course Content</a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- RIGHT SIDE: Referral Card -->
+                <div style="flex: 1; min-width: 280px; display: flex; flex-direction: column;">
+                    <div style="background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 15px 45px rgba(0,0,0,0.12); height: 100%; display: flex; flex-direction: column;">
+                        
+                        <!-- Color Header with Bold Amount -->
+                        <div style="background: linear-gradient(135deg, #FF6B35, #F7931E); padding: 18px 15px; text-align: center;">
+                            <div style="font-size: 11px; color: rgba(255,255,255,0.9); letter-spacing: 2px; margin-bottom: 4px;">💰 REFER & EARN</div>
+                            <div style="font-size: 38px; font-weight: 900; color: white; line-height: 1.1;">
+                                ₦10,000
+                            </div>
+                            <div style="font-size: 11px; color: rgba(255,255,255,0.9);">per successful referral</div>
+                        </div>
+                        
+                        <!-- Portrait Image -->
+                        <div style="text-align: center; padding: 15px 15px 0 15px; background: white;">
+                            <img src="{% static 'images/refer-earn-portrait.jpg' %}" alt="Refer and Earn" style="width: 140px; height: auto; border-radius: 12px; border: 2px solid #FF6B35; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        </div>
+                        
+                        <!-- Content Section -->
+                        <div style="padding: 15px 15px 20px 15px; flex: 1;">
+                            <!-- Your Referral Name -->
+                            <div style="background: #f8f9fa; padding: 12px; border-radius: 12px; text-align: center; margin-bottom: 15px; border: 1px solid #ffe0b3;">
+                                <div style="font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px;">Your Referral Name</div>
+                                <div id="referralName" style="font-size: 16px; font-weight: 800; color: #0B1F5B; margin: 6px 0; word-break: break-word;">{{ user.first_name }} {{ user.last_name }}</div>
+                                <button onclick="copyReferralName(this)" style="background: #F2C94C; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #0B1F5B;">📋 Copy Name</button>
+                            </div>
+                            <!-- How It Works -->
+                            <div>
+                                <div style="font-weight: 700; color: #0B1F5B; margin-bottom: 12px; font-size: 14px; text-align: center;">⚡ How It Works</div>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="background: #FF6B35; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 12px;">1</div>
+                                        <div style="font-size: 13px; color: #444;">Share <strong>your name</strong> with a friend</div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="background: #FF6B35; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 12px;">2</div>
+                                        <div style="font-size: 13px; color: #444;">They enter <strong>your name</strong> during registration</div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="background: #4caf50; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 12px;">3</div>
+                                        <div style="font-size: 13px; color: #444;">You receive <strong style="color: #FF6B35;">₦10,000</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- No Limit Badge -->
+                            <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #eee;">
+                                <div style="background: #e8f5e9; padding: 8px; border-radius: 8px; text-align: center;">
+                                    <span style="font-size: 11px; color: #2e7d32;">✅ No limit — refer as many friends as you want!</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function copyReferralName(btn) {
+    const name = document.getElementById('referralName').innerText;
+    navigator.clipboard.writeText(name).then(function() {
+        const originalText = btn.innerText;
+        btn.innerText = '✓ Copied!';
+        btn.style.background = '#4caf50';
+        btn.style.color = 'white';
+        setTimeout(function() {
+            btn.innerText = originalText;
+            btn.style.background = '#F2C94C';
+            btn.style.color = '#0B1F5B';
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}

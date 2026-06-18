@@ -1,0 +1,55 @@
+{% extends 'portal/base.html' %}
+{% block content %}
+<div class="dashboard-container">
+    <!-- FIXED NAVIGATION BAR -->
+    <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+        <div class="navbar-brand">
+            {% load static %}
+            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid var(--warm-yellow);">
+            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| {{ lesson.title }}</span></h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="{% url 'playlist_lessons' playlist.id %}" class="logout-btn" style="padding: 0.5rem 1.2rem;">← Back to {{ playlist.title }}</a>
+            <span style="color: var(--navy-blue); font-weight: 500;">👋 {{ user.first_name }} {{ user.last_name }}</span>
+        </div>
+    </nav>
+    
+    <!-- PADDING TOP -->
+    <div class="main-content" style="padding-top: 90px;">
+        <div class="progress-section">
+            {% if lesson.video_url %}
+                <div class="video-container">
+                    <iframe src="{{ lesson.video_url }}" frameborder="0" allowfullscreen></iframe>
+                </div>
+            {% endif %}
+            
+            <h2 style="color: var(--navy-blue);">{{ lesson.title }}</h2>
+            
+            <h3 style="color: var(--navy-blue); margin-top: 1.5rem;">Notes</h3>
+            <p>{{ lesson.notes|linebreaks }}</p>
+            
+            <div style="display: flex; gap: 1rem; margin-top: 2rem; flex-wrap: wrap;">
+                {% if prev_lesson %}
+                    <a href="{% url 'lesson_detail' playlist.id prev_lesson.id %}" class="btn btn-secondary">← Previous</a>
+                {% endif %}
+                
+                {% if not is_completed %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" name="mark_complete" class="btn">✓ Mark as Completed</button>
+                    </form>
+                {% else %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" name="undo_complete" class="btn" style="background: #ff9800;">↺ Undo</button>
+                    </form>
+                {% endif %}
+                
+                {% if next_lesson %}
+                    <a href="{% url 'lesson_detail' playlist.id next_lesson.id %}" class="btn btn-secondary">Next →</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+databases:
+  - name: oitlms_db
+    plan: free
+    databaseName: oitlms
+    user: oitlms_user
+
+services:
+  - type: web
+    plan: free
+    name: oitlms
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn config.wsgi:application"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: oitlms_db
+          property: connectionString
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: EMAIL_HOST_USER
+        value: othelloinstituteoftechnology@gmail.com
+      - key: EMAIL_HOST_PASSWORD
+        value: your-16-digit-app-password-here
+      - key: DEBUG
+        value: "False"

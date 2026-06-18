@@ -1,0 +1,33 @@
+{% extends 'portal/base.html' %}
+{% block content %}
+<div class="login-bg">
+    <div class="login-card" style="max-width: 500px; text-align: center;">
+        <div class="logo">
+            {% load static %}
+            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" class="logo-img" onerror="this.src='https://via.placeholder.com/100?text=OIT'">
+            <h1 style="color: #f44336;">⚠️ Account Suspended</h1>
+        </div>
+        
+        <div style="background: #ffebee; padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
+            <p style="color: #c62828; font-size: 1.1rem; margin-bottom: 1rem;">
+                Your account has been temporarily suspended.
+            </p>
+            <p style="color: #d32f2f; margin-bottom: 1rem;">
+                This is not a platform error or technical issue.
+            </p>
+            <p style="color: #e53935; font-weight: 500;">
+                Please contact the school admin to reactivate your account.
+            </p>
+        </div>
+        
+        <p style="color: #666; margin-top: 1rem; font-style: italic;">
+            Thank you for your understanding.
+        </p>
+        
+        <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <a href="{% url 'login' %}" class="btn" style="display: inline-block; text-decoration: none; width: auto; padding: 12px 24px;">🔐 Login to Another Account</a>
+            <a href="{% url 'registration' %}" class="btn btn-secondary" style="display: inline-block; text-decoration: none; width: auto; padding: 12px 24px;">📝 Create New Account</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

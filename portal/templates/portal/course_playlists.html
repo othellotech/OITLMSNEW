@@ -1,0 +1,60 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-container">
+    <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+        <div class="navbar-brand">
+            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid var(--warm-yellow);">
+            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| {{ course.title }}</span></h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <span style="color: var(--navy-blue); font-weight: 500;">👋 {{ user.first_name }} {{ user.last_name }}</span>
+            <a href="{% url 'dashboard' %}" class="logout-btn" style="padding: 0.5rem 1.2rem;">← Back to Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="main-content" style="padding-top: 90px;">
+        <div class="welcome-card">
+            <h1>📚 {{ course.title }}</h1>
+            <p>{{ course.description }}</p>
+            <div style="margin-top: 10px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px;">
+                    Progress: {{ progress }}% ({{ completed }}/{{ total }} lessons)
+                </span>
+            </div>
+        </div>
+
+        <!-- Course Progress -->
+        <div class="progress-section">
+            <h3>Course Progress</h3>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: {{ progress }}%">
+                    {{ progress }}%
+                </div>
+            </div>
+            <p style="margin-top: 10px; color: #666;">{{ completed }} of {{ total }} lessons completed</p>
+        </div>
+
+        <!-- Playlists -->
+        <h2>📖 Course Playlists</h2>
+        <div class="playlist-grid">
+            {% for playlist in playlists %}
+                <div class="playlist-card {% if playlist.id not in unlocked_playlists %}locked{% endif %}">
+                    <h3>{{ playlist.title }}</h3>
+                    <p style="color: #666; font-size: 14px; margin: 10px 0;">
+                        {{ playlist.lessons.count }} lessons
+                    </p>
+                    {% if playlist.id in unlocked_playlists %}
+                        <a href="{% url 'playlist_lessons' playlist.id %}" class="unlock-btn">▶️ Start Learning</a>
+                    {% else %}
+                        <a href="{% url 'unlock_playlist' playlist.id %}" class="unlock-btn">🔓 Unlock with Code</a>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <p>No playlists available for this course.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

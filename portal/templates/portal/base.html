@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OITLMS - Othello Institute of Technology</title>
+    {% load static %}
+    <link rel="icon" type="image/jpeg" href="{% static 'images/logo.jpeg' %}">
+    <link rel="stylesheet" href="{% static 'portal/css/style.css' %}">
+</head>
+<body>
+    <div id="message-container" style="position: fixed; top: 20px; right: 20px; left: 20px; z-index: 9999; pointer-events: none;">
+        {% if messages %}
+            {% for message in messages %}
+                {% if 'ACCOUNT_SUSPENDED_REDIRECT' not in message.message %}
+                    <div class="message {{ message.tags }}" style="pointer-events: auto;">
+                        {% if 'ACCOUNT SUSPENDED' in message.message %}
+                            <div>
+                                <strong>⚠️ ACCOUNT SUSPENDED</strong><br><br>
+                                Your account has been temporarily suspended.<br><br>
+                                This is not a platform error or technical issue.<br><br>
+                                Please contact the school admin to reactivate your account.<br><br>
+                                Thank you for your understanding.
+                            </div>
+                        {% else %}
+                            {{ message.message }}
+                        {% endif %}
+                        <button class="message-close" style="position: absolute; right: 10px; top: 10px; background: none; border: none; color: inherit; font-size: 20px; cursor: pointer; pointer-events: auto;">&times;</button>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </div>
+    
+    {% block content %}{% endblock %}
+    
+    <script>
+        // Auto-dismiss messages after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const messages = document.querySelectorAll('.message');
+            messages.forEach(function(message) {
+                // Auto dismiss after 5 seconds
+                setTimeout(function() {
+                    message.style.animation = 'slideOut 0.3s ease-out';
+                    setTimeout(function() {
+                        if (message.parentNode) {
+                            message.remove();
+                        }
+                    }, 300);
+                }, 5000);
+                
+                // Add close button functionality
+                const closeBtn = message.querySelector('.message-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', function() {
+                        message.style.animation = 'slideOut 0.3s ease-out';
+                        setTimeout(function() {
+                            if (message.parentNode) {
+                                message.remove();
+                            }
+                        }, 300);
+                    });
+                }
+            });
+        });
+    </script>
+    
+    <style>
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        .message {
+            position: relative;
+            padding: 15px 35px 15px 20px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .message {
+                margin-left: 10px;
+                margin-right: 10px;
+                font-size: 14px;
+                padding: 12px 30px 12px 15px;
+            }
+        }
+        
+        .message.success {
+            background: linear-gradient(135deg, #4caf50, #45a049);
+            color: white;
+        }
+        
+        .message.error {
+            background: linear-gradient(135deg, #f44336, #da190b);
+            color: white;
+        }
+        
+        .message.warning {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+        }
+        
+        .message.info {
+            background: linear-gradient(135deg, var(--navy-blue), #0d295c);
+            color: white;
+        }
+        
+        .message-close {
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+        
+        .message-close:hover {
+            opacity: 1;
+        }
+    </style>
+</body>
+</html>

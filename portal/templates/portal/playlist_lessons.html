@@ -1,0 +1,42 @@
+{% extends 'portal/base.html' %}
+{% block content %}
+<div class="dashboard-container">
+    <!-- FIXED NAVIGATION BAR -->
+    <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+        <div class="navbar-brand">
+            {% load static %}
+            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid var(--warm-yellow);">
+            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| {{ playlist.title }}</span></h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="{% url 'dashboard' %}" class="logout-btn" style="padding: 0.5rem 1.2rem;">← Dashboard</a>
+            <span style="color: var(--navy-blue); font-weight: 500;">👋 {{ user.first_name }} {{ user.last_name }}</span>
+        </div>
+    </nav>
+    
+    <!-- PADDING TOP -->
+    <div class="main-content" style="padding-top: 90px;">
+        <div class="lesson-list">
+            {% for lesson in lessons %}
+                <div class="lesson-item {% if lesson.id in completed_ids %}completed{% endif %}">
+                    <div>
+                        <strong>{{ forloop.counter }}. {{ lesson.title }}</strong>
+                        {% if lesson.id in completed_ids %}
+                            <span style="color: green; margin-left: 10px;">✓</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        {% if lesson.id in completed_ids %}
+                            <a href="{% url 'lesson_detail' playlist.id lesson.id %}" class="unlock-btn" style="background: #4caf50;">Review</a>
+                        {% else %}
+                            <a href="{% url 'lesson_detail' playlist.id lesson.id %}" class="unlock-btn">Start</a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <p>No lessons yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
