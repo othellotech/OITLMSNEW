@@ -20,7 +20,7 @@ services:
         generateValue: true
       - key: EMAIL_HOST_USER
         value: othelloinstituteoftechnology@gmail.com
-      - key: EMAIL_HOST_PASSWORD
-        value: your-16-digit-app-password-here
+      # - key: EMAIL_HOST_PASSWORD
+        # value: your-16-digit-app-password-here
       - key: DEBUG
         value: "False"
