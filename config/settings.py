@@ -148,20 +148,23 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 # ==============================================
 
 # Use SMTP for real email
+# settings.py
+
+# ==============================================
+# EMAIL CONFIGURATION - Brevo (300 emails/day)
+# ==============================================
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST = 'smtp-relay.brevo.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'othelloinstituteoftechnology@gmail.com')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'othelloinstituteoftechnology@gmail.com')
+EMAIL_HOST_USER = os.environ.get('BREVO_SMTP_LOGIN')  # Your Brevo login email
+EMAIL_HOST_PASSWORD = os.environ.get('BREVO_SMTP_KEY')  # The SMTP key you generated
+DEFAULT_FROM_EMAIL = 'othelloinstituteoftechnology@gmail.com'  # Must be verified in Brevo
 
 # Password reset timeout (24 hours in seconds)
 PASSWORD_RESET_TIMEOUT = 86400
 
-# Warning if email password not set
-if not EMAIL_HOST_PASSWORD:
-    print("⚠️  WARNING: EMAIL_HOST_PASSWORD not set in .env file!")
-    print("Password reset will not work until you set it.")
+
 
 
