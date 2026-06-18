@@ -154,16 +154,33 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 # EMAIL CONFIGURATION - Brevo (300 emails/day)
 # ==============================================
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp-relay.brevo.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('BREVO_SMTP_LOGIN')  # Your Brevo login email
-EMAIL_HOST_PASSWORD = os.environ.get('BREVO_SMTP_KEY')  # The SMTP key you generated
-DEFAULT_FROM_EMAIL = 'othelloinstituteoftechnology@gmail.com'  # Must be verified in Brevo
+# ==============================================
+# EMAIL CONFIGURATION - Brevo with Console Fallback
+# ==============================================
+
+# import os
+
+# Check if Brevo credentials are set
+BREVO_SMTP_LOGIN = os.environ.get('BREVO_SMTP_LOGIN')
+BREVO_SMTP_KEY = os.environ.get('BREVO_SMTP_KEY')
+
+# Try Brevo if credentials are available
+if BREVO_SMTP_LOGIN and BREVO_SMTP_KEY:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp-relay.brevo.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = BREVO_SMTP_LOGIN
+    EMAIL_HOST_PASSWORD = BREVO_SMTP_KEY
+    DEFAULT_FROM_EMAIL = 'OIT LMS <othelloinstituteoftechnology@gmail.com>'
+    print("✅ Brevo SMTP configured")
+else:
+    # Fallback to console if credentials missing
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    print("⚠️  Brevo credentials not set. Using console backend. Reset links will appear in logs.")
 
 # Password reset timeout (24 hours in seconds)
-PASSWORD_RESET_TIMEOUT = 86400
+PASSWORD_RESET_TIMEOUT = 86400400
 
 
 
