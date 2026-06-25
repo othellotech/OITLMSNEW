@@ -14,9 +14,10 @@
         </div>
     </nav>
     
-    <!-- PADDING TOP -->
-    <div class="main-content" style="padding-top: 90px;">
+    <!-- MAIN CONTENT - Desktop and Mobile padding -->
+    <div class="main-content">
         <div class="lesson-list">
+            <h2 style="color: var(--navy-blue); margin-bottom: 1.5rem;">📚 {{ playlist.title }} - Lessons</h2>
             {% for lesson in lessons %}
                 <div class="lesson-item {% if lesson.id in completed_ids %}completed{% endif %}">
                     <div>
@@ -39,4 +40,90 @@
         </div>
     </div>
 </div>
+
+<style>
+    /* Desktop Fix - Ensure navbar doesn't overlap content */
+    .main-content {
+        padding-top: 100px !important;
+    }
+    
+    /* Mobile Fix - Add extra padding on small screens */
+    @media (max-width: 768px) {
+        .navbar {
+            padding: 0.5rem 1rem !important;
+            flex-wrap: wrap !important;
+        }
+        
+        .navbar-brand {
+            width: 100% !important;
+            justify-content: center !important;
+        }
+        
+        .navbar-brand h2 {
+            font-size: 0.9rem !important;
+            text-align: center !important;
+        }
+        
+        .navbar-brand h2 span {
+            display: none !important;
+        }
+        
+        .navbar-brand img {
+            width: 35px !important;
+            height: 35px !important;
+        }
+        
+        .navbar > div:last-child {
+            width: 100% !important;
+            justify-content: center !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+        }
+        
+        .logout-btn {
+            padding: 0.3rem 0.8rem !important;
+            font-size: 0.8rem !important;
+        }
+        
+        .navbar span[style*="color: var(--navy-blue)"] {
+            font-size: 0.8rem !important;
+        }
+        
+        .main-content {
+            padding-top: 140px !important;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+        }
+        
+        .lesson-list {
+            padding: 1rem !important;
+        }
+        
+        .lesson-item {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 10px !important;
+            padding: 0.8rem !important;
+        }
+        
+        .lesson-item div:last-child {
+            width: 100% !important;
+        }
+        
+        .unlock-btn {
+            width: 100% !important;
+            text-align: center !important;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .main-content {
+            padding-top: 160px !important;
+        }
+        
+        .lesson-item strong {
+            font-size: 0.9rem !important;
+        }
+    }
+</style>
 {% endblock %}

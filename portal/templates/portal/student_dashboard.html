@@ -24,7 +24,7 @@
             </a>
         </div>
     </nav>
-    
+
     <!-- Notifications Dropdown -->
     <div id="notificationsDropdown" style="display: none; position: fixed; top: 80px; right: 20px; width: 400px; max-height: 500px; overflow-y: auto; background: white; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 999; padding: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -71,9 +71,9 @@
         </div>
     </div>
     
-    <div class="main-content" style="padding-top: 90px;">
+    <div class="main-content">
         
-        <!-- WELCOME CARD - KEPT ORIGINAL SIZE -->
+        <!-- WELCOME CARD -->
         <div class="welcome-card">
             <h1>Welcome, {{ user.first_name }}! 👋</h1>
             {% if has_single_course %}
@@ -84,7 +84,7 @@
             <p>Continue your learning journey</p>
         </div>
         
-        <!-- NOTIFICATIONS SECTION - BELOW WELCOME CARD, ABOVE PROGRESS BAR -->
+        <!-- NOTIFICATIONS SECTION -->
         {% if notifications %}
             <div class="notifications-section" style="margin-bottom: 1.5rem;">
                 {% for notification in notifications %}
@@ -128,7 +128,7 @@
             </div>
         {% endif %}
         
-        <!-- SINGLE PROGRESS BAR -->
+        <!-- PROGRESS BAR -->
         <div class="progress-section">
             <h3>Your Overall Learning Progress</h3>
             <div class="progress-bar-container">
@@ -267,6 +267,90 @@
     </div>
 </div>
 
+<style>
+    /* Desktop Fix - Ensure navbar doesn't overlap content */
+    .main-content {
+        padding-top: 100px !important;
+    }
+    
+    /* Mobile Fix - Add extra padding on small screens */
+    @media (max-width: 768px) {
+        .navbar {
+            padding: 0.5rem 1rem !important;
+            flex-wrap: wrap !important;
+        }
+        
+        .navbar-brand {
+            width: 100% !important;
+            justify-content: center !important;
+        }
+        
+        .navbar-brand h2 {
+            font-size: 0.9rem !important;
+            text-align: center !important;
+        }
+        
+        .navbar-brand h2 span {
+            display: none !important;
+        }
+        
+        .navbar-brand img {
+            width: 35px !important;
+            height: 35px !important;
+        }
+        
+        .navbar > div:last-child {
+            width: 100% !important;
+            justify-content: center !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+        }
+        
+        .logout-btn {
+            padding: 0.3rem 0.8rem !important;
+            font-size: 0.8rem !important;
+        }
+        
+        .navbar span[style*="color: var(--navy-blue)"] {
+            font-size: 0.8rem !important;
+        }
+        
+        .main-content {
+            padding-top: 140px !important;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+        }
+        
+        .welcome-card {
+            padding: 1.2rem !important;
+        }
+        
+        .welcome-card h1 {
+            font-size: 1.3rem !important;
+        }
+        
+        .welcome-card h2 {
+            font-size: 1rem !important;
+        }
+        
+        .playlist-grid {
+            grid-template-columns: 1fr !important;
+        }
+        
+        #notificationsDropdown {
+            width: 90% !important;
+            right: 5% !important;
+            left: 5% !important;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .main-content {
+            padding-top: 160px !important;
+        }
+    }
+</style>
+
 <script>
 function copyReferralName(btn) {
     const name = document.getElementById('referralName').innerText;
@@ -296,7 +380,6 @@ function updateNotificationDot() {
     const notificationCards = document.querySelectorAll('.notification-card');
     const notificationDot = document.getElementById('notificationDot');
     
-    // Count visible notification cards
     let count = 0;
     notificationCards.forEach(card => {
         if (card.style.display !== 'none') {
@@ -310,15 +393,6 @@ function updateNotificationDot() {
         notificationDot.style.display = 'flex';
         notificationDot.textContent = count;
     }
-    
-    // Also update the dropdown items count
-    const dropdownItems = document.querySelectorAll('.notification-item');
-    let dropdownCount = 0;
-    dropdownItems.forEach(item => {
-        if (item.style.display !== 'none') {
-            dropdownCount++;
-        }
-    });
 }
 
 function dismissNotification(notificationId) {
@@ -333,12 +407,10 @@ function dismissNotification(notificationId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Hide in dropdown
             const notificationItem = document.querySelector(`.notification-item[data-notification-id="${notificationId}"]`);
             if (notificationItem) {
                 notificationItem.style.display = 'none';
             }
-            // Hide on dashboard
             const notificationCard = document.querySelector(`.notification-card[data-notification-id="${notificationId}"]`);
             if (notificationCard) {
                 notificationCard.style.display = 'none';
@@ -360,12 +432,10 @@ function dismissNotificationCard(notificationId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Hide on dashboard
             const notificationCard = document.querySelector(`.notification-card[data-notification-id="${notificationId}"]`);
             if (notificationCard) {
                 notificationCard.style.display = 'none';
             }
-            // Hide in dropdown
             const notificationItem = document.querySelector(`.notification-item[data-notification-id="${notificationId}"]`);
             if (notificationItem) {
                 notificationItem.style.display = 'none';

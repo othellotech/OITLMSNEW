@@ -3,18 +3,18 @@
 
 {% block content %}
 <div class="dashboard-container">
-    <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+    <nav class="navbar">
         <div class="navbar-brand">
-            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid var(--warm-yellow);">
-            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| {{ course.title }}</span></h2>
+            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo">
+            <h2>Othello Institute of Technology <span>| {{ course.title }}</span></h2>
         </div>
-        <div style="display: flex; align-items: center; gap: 20px;">
-            <span style="color: var(--navy-blue); font-weight: 500;">👋 {{ user.first_name }} {{ user.last_name }}</span>
-            <a href="{% url 'dashboard' %}" class="logout-btn" style="padding: 0.5rem 1.2rem;">← Back to Dashboard</a>
+        <div>
+            <span>👋 {{ user.first_name }}</span>
+            <a href="{% url 'dashboard' %}" class="logout-btn">← Back</a>
         </div>
     </nav>
 
-    <div class="main-content" style="padding-top: 90px;">
+    <div class="main-content">
         <div class="welcome-card">
             <h1>📚 {{ course.title }}</h1>
             <p>{{ course.description }}</p>
@@ -25,7 +25,6 @@
             </div>
         </div>
 
-        <!-- Course Progress -->
         <div class="progress-section">
             <h3>Course Progress</h3>
             <div class="progress-bar-container">
@@ -36,7 +35,6 @@
             <p style="margin-top: 10px; color: #666;">{{ completed }} of {{ total }} lessons completed</p>
         </div>
 
-        <!-- Playlists -->
         <h2>📖 Course Playlists</h2>
         <div class="playlist-grid">
             {% for playlist in playlists %}
