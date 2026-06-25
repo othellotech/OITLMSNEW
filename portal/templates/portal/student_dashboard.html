@@ -10,6 +10,11 @@
             <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| Student Dashboard</span></h2>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
+            <!-- Notification Bell -->
+            <div class="notification-bell-wrapper" style="position: relative; cursor: pointer;" onclick="toggleNotifications()">
+                <span style="font-size: 24px;">🔔</span>
+                <span id="notificationDot" class="notification-dot" style="position: absolute; top: -5px; right: -5px; background: #f44336; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: {% if has_unread_notifications %}flex{% else %}none{% endif %}; align-items: center; justify-content: center; font-weight: bold;">{{ notifications|length }}</span>
+            </div>
             <span style="color: var(--navy-blue); font-weight: 500;">👋 {{ user.first_name }} {{ user.last_name }}</span>
             <a href="{% url 'logout' %}" 
                class="logout-btn" 
@@ -20,7 +25,55 @@
         </div>
     </nav>
     
+    <!-- Notifications Dropdown -->
+    <div id="notificationsDropdown" style="display: none; position: fixed; top: 80px; right: 20px; width: 400px; max-height: 500px; overflow-y: auto; background: white; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 999; padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="margin: 0;">🔔 Notifications</h3>
+            <button onclick="toggleNotifications()" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+        </div>
+        <div id="notificationsList">
+            {% csrf_token %}
+            {% if notifications %}
+                {% for notification in notifications %}
+                    {% if not notification.is_dismissed %}
+                        <div class="notification-item {% if not notification.is_read %}unread{% endif %}" 
+                             data-notification-id="{{ notification.id }}"
+                             style="padding: 12px 15px; border-bottom: 1px solid #eee; {% if not notification.is_read %}background: #e3f2fd; border-left: 3px solid #2196F3;{% endif %}">
+                            <div style="display: flex; align-items: flex-start; gap: 10px;">
+                                <div style="font-size: 20px;">
+                                    {% if notification.notification_type == 'system' %}
+                                        ⚙️
+                                    {% elif notification.notification_type == 'payment' %}
+                                        💰
+                                    {% elif notification.notification_type == 'suspension' %}
+                                        ⚠️
+                                    {% else %}
+                                        📢
+                                    {% endif %}
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; color: #0B1F5B;">{{ notification.title }}</div>
+                                    <div style="color: #666; font-size: 14px;">{{ notification.message }}</div>
+                                    <div style="color: #999; font-size: 12px; margin-top: 4px;">{{ notification.created_at|default:"Just now" }}</div>
+                                </div>
+                                {% if notification.is_dismissible %}
+                                    <button onclick="dismissNotification({{ notification.id }})" style="background: none; border: none; color: #999; cursor: pointer; font-size: 16px;">✕</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; color: #999; padding: 30px 0;">
+                    <p>No notifications</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
     <div class="main-content" style="padding-top: 90px;">
+        
+        <!-- WELCOME CARD - KEPT ORIGINAL SIZE -->
         <div class="welcome-card">
             <h1>Welcome, {{ user.first_name }}! 👋</h1>
             {% if has_single_course %}
@@ -30,6 +83,50 @@
             {% endif %}
             <p>Continue your learning journey</p>
         </div>
+        
+        <!-- NOTIFICATIONS SECTION - BELOW WELCOME CARD, ABOVE PROGRESS BAR -->
+        {% if notifications %}
+            <div class="notifications-section" style="margin-bottom: 1.5rem;">
+                {% for notification in notifications %}
+                    {% if not notification.is_dismissed %}
+                        <div class="notification-card alert-{{ notification.notification_type }}" 
+                             data-notification-id="{{ notification.id }}"
+                             style="background: white; border-radius: 12px; padding: 15px 25px; margin-bottom: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border-left: 5px solid 
+                             {% if notification.notification_type == 'suspension' %}#f44336{% elif notification.notification_type == 'payment' %}#4caf50{% elif notification.notification_type == 'system' %}#ff9800{% else %}#2196F3{% endif %};
+                             display: flex; align-items: center; justify-content: space-between;">
+                            
+                            <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
+                                <div style="font-size: 24px; flex-shrink: 0;">
+                                    {% if notification.notification_type == 'suspension' %}
+                                        ⚠️
+                                    {% elif notification.notification_type == 'payment' %}
+                                        💰
+                                    {% elif notification.notification_type == 'system' %}
+                                        ⚙️
+                                    {% else %}
+                                        📢
+                                    {% endif %}
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; color: #0B1F5B; font-size: 1rem;">{{ notification.title }}</div>
+                                    <div style="color: #555; font-size: 0.9rem;">{{ notification.message }}</div>
+                                    <div style="color: #999; font-size: 0.75rem; margin-top: 2px;">{{ notification.created_at|default:"Just now" }}</div>
+                                </div>
+                            </div>
+                            
+                            {% if notification.is_dismissible %}
+                                <button onclick="dismissNotificationCard({{ notification.id }})" 
+                                        style="background: none; border: none; color: #999; cursor: pointer; font-size: 20px; padding: 0 10px; transition: color 0.3s ease;"
+                                        onmouseover="this.style.color='#f44336'" 
+                                        onmouseout="this.style.color='#999'">
+                                    ✕
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
         
         <!-- SINGLE PROGRESS BAR -->
         <div class="progress-section">
@@ -43,9 +140,8 @@
         </div>
         
         {% if has_single_course %}
-            <!-- SINGLE COURSE VIEW - Original layout with playlists and referral side by side -->
+            <!-- SINGLE COURSE VIEW -->
             <div style="display: flex; gap: 30px; width: 100%; flex-wrap: wrap; align-items: stretch;">
-                <!-- LEFT SIDE: Playlists -->
                 <div style="flex: 2; min-width: 250px; display: flex; flex-direction: column;">
                     <h2 style="margin-bottom: 20px;">📚 Your Playlists</h2>
                     <div class="playlist-grid" style="flex: 1;">
@@ -62,33 +158,22 @@
                     </div>
                 </div>
                 
-                <!-- RIGHT SIDE: Referral Card -->
                 <div style="flex: 1; min-width: 280px; display: flex; flex-direction: column;">
                     <div style="background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 15px 45px rgba(0,0,0,0.12); height: 100%; display: flex; flex-direction: column;">
-                        
-                        <!-- Color Header with Bold Amount -->
                         <div style="background: linear-gradient(135deg, #FF6B35, #F7931E); padding: 18px 15px; text-align: center;">
                             <div style="font-size: 11px; color: rgba(255,255,255,0.9); letter-spacing: 2px; margin-bottom: 4px;">💰 REFER & EARN</div>
-                            <div style="font-size: 38px; font-weight: 900; color: white; line-height: 1.1;">
-                                ₦10,000
-                            </div>
+                            <div style="font-size: 38px; font-weight: 900; color: white; line-height: 1.1;">₦10,000</div>
                             <div style="font-size: 11px; color: rgba(255,255,255,0.9);">per successful referral</div>
                         </div>
-                        
-                        <!-- Portrait Image -->
                         <div style="text-align: center; padding: 15px 15px 0 15px; background: white;">
                             <img src="{% static 'images/refer-earn-portrait.jpg' %}" alt="Refer and Earn" style="width: 140px; height: auto; border-radius: 12px; border: 2px solid #FF6B35; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                         </div>
-                        
-                        <!-- Content Section -->
                         <div style="padding: 15px 15px 20px 15px; flex: 1;">
-                            <!-- Your Referral Name -->
                             <div style="background: #f8f9fa; padding: 12px; border-radius: 12px; text-align: center; margin-bottom: 15px; border: 1px solid #ffe0b3;">
                                 <div style="font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px;">Your Referral Name</div>
                                 <div id="referralName" style="font-size: 16px; font-weight: 800; color: #0B1F5B; margin: 6px 0; word-break: break-word;">{{ user.first_name }} {{ user.last_name }}</div>
                                 <button onclick="copyReferralName(this)" style="background: #F2C94C; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #0B1F5B;">📋 Copy Name</button>
                             </div>
-                            <!-- How It Works -->
                             <div>
                                 <div style="font-weight: 700; color: #0B1F5B; margin-bottom: 12px; font-size: 14px; text-align: center;">⚡ How It Works</div>
                                 <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -106,8 +191,6 @@
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- No Limit Badge -->
                             <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #eee;">
                                 <div style="background: #e8f5e9; padding: 8px; border-radius: 8px; text-align: center;">
                                     <span style="font-size: 11px; color: #2e7d32;">✅ No limit — refer as many friends as you want!</span>
@@ -119,9 +202,8 @@
             </div>
             
         {% else %}
-            <!-- MULTIPLE COURSES VIEW - Course cards layout -->
+            <!-- MULTIPLE COURSES VIEW -->
             <div style="display: flex; gap: 30px; width: 100%; flex-wrap: wrap; align-items: stretch;">
-                <!-- LEFT SIDE: Course Cards -->
                 <div style="flex: 2; min-width: 250px; display: flex; flex-direction: column;">
                     <h2 style="margin-bottom: 20px;">📚 Your Courses</h2>
                     <div class="playlist-grid" style="flex: 1;">
@@ -139,33 +221,22 @@
                     </div>
                 </div>
                 
-                <!-- RIGHT SIDE: Referral Card -->
                 <div style="flex: 1; min-width: 280px; display: flex; flex-direction: column;">
                     <div style="background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 15px 45px rgba(0,0,0,0.12); height: 100%; display: flex; flex-direction: column;">
-                        
-                        <!-- Color Header with Bold Amount -->
                         <div style="background: linear-gradient(135deg, #FF6B35, #F7931E); padding: 18px 15px; text-align: center;">
                             <div style="font-size: 11px; color: rgba(255,255,255,0.9); letter-spacing: 2px; margin-bottom: 4px;">💰 REFER & EARN</div>
-                            <div style="font-size: 38px; font-weight: 900; color: white; line-height: 1.1;">
-                                ₦10,000
-                            </div>
+                            <div style="font-size: 38px; font-weight: 900; color: white; line-height: 1.1;">₦10,000</div>
                             <div style="font-size: 11px; color: rgba(255,255,255,0.9);">per successful referral</div>
                         </div>
-                        
-                        <!-- Portrait Image -->
                         <div style="text-align: center; padding: 15px 15px 0 15px; background: white;">
                             <img src="{% static 'images/refer-earn-portrait.jpg' %}" alt="Refer and Earn" style="width: 140px; height: auto; border-radius: 12px; border: 2px solid #FF6B35; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                         </div>
-                        
-                        <!-- Content Section -->
                         <div style="padding: 15px 15px 20px 15px; flex: 1;">
-                            <!-- Your Referral Name -->
                             <div style="background: #f8f9fa; padding: 12px; border-radius: 12px; text-align: center; margin-bottom: 15px; border: 1px solid #ffe0b3;">
                                 <div style="font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px;">Your Referral Name</div>
                                 <div id="referralName" style="font-size: 16px; font-weight: 800; color: #0B1F5B; margin: 6px 0; word-break: break-word;">{{ user.first_name }} {{ user.last_name }}</div>
                                 <button onclick="copyReferralName(this)" style="background: #F2C94C; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #0B1F5B;">📋 Copy Name</button>
                             </div>
-                            <!-- How It Works -->
                             <div>
                                 <div style="font-weight: 700; color: #0B1F5B; margin-bottom: 12px; font-size: 14px; text-align: center;">⚡ How It Works</div>
                                 <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -183,8 +254,6 @@
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- No Limit Badge -->
                             <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #eee;">
                                 <div style="background: #e8f5e9; padding: 8px; border-radius: 8px; text-align: center;">
                                     <span style="font-size: 11px; color: #2e7d32;">✅ No limit — refer as many friends as you want!</span>
@@ -213,5 +282,111 @@ function copyReferralName(btn) {
         }, 2000);
     });
 }
+
+function toggleNotifications() {
+    const dropdown = document.getElementById('notificationsDropdown');
+    if (dropdown.style.display === 'none') {
+        dropdown.style.display = 'block';
+    } else {
+        dropdown.style.display = 'none';
+    }
+}
+
+function updateNotificationDot() {
+    const notificationCards = document.querySelectorAll('.notification-card');
+    const notificationDot = document.getElementById('notificationDot');
+    
+    // Count visible notification cards
+    let count = 0;
+    notificationCards.forEach(card => {
+        if (card.style.display !== 'none') {
+            count++;
+        }
+    });
+    
+    if (count === 0) {
+        notificationDot.style.display = 'none';
+    } else {
+        notificationDot.style.display = 'flex';
+        notificationDot.textContent = count;
+    }
+    
+    // Also update the dropdown items count
+    const dropdownItems = document.querySelectorAll('.notification-item');
+    let dropdownCount = 0;
+    dropdownItems.forEach(item => {
+        if (item.style.display !== 'none') {
+            dropdownCount++;
+        }
+    });
+}
+
+function dismissNotification(notificationId) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    fetch(`/notifications/dismiss/${notificationId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Hide in dropdown
+            const notificationItem = document.querySelector(`.notification-item[data-notification-id="${notificationId}"]`);
+            if (notificationItem) {
+                notificationItem.style.display = 'none';
+            }
+            // Hide on dashboard
+            const notificationCard = document.querySelector(`.notification-card[data-notification-id="${notificationId}"]`);
+            if (notificationCard) {
+                notificationCard.style.display = 'none';
+                updateNotificationDot();
+            }
+        }
+    });
+}
+
+function dismissNotificationCard(notificationId) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    fetch(`/notifications/dismiss/${notificationId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Hide on dashboard
+            const notificationCard = document.querySelector(`.notification-card[data-notification-id="${notificationId}"]`);
+            if (notificationCard) {
+                notificationCard.style.display = 'none';
+            }
+            // Hide in dropdown
+            const notificationItem = document.querySelector(`.notification-item[data-notification-id="${notificationId}"]`);
+            if (notificationItem) {
+                notificationItem.style.display = 'none';
+            }
+            updateNotificationDot();
+        }
+    });
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('notificationsDropdown');
+    const bell = document.querySelector('.notification-bell-wrapper');
+    if (dropdown && bell && !bell.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.style.display = 'none';
+    }
+});
+
+// Update notification dot on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateNotificationDot();
+});
 </script>
 {% endblock %}

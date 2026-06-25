@@ -4,10 +4,12 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.db import transaction
 from django.contrib.auth import get_user_model
-from .models import AccessCode, Course, Playlist, PlaylistAccessCode, Lesson, CompletedLesson
+from .models import AccessCode, Course, Playlist, PlaylistAccessCode, Lesson, CompletedLesson, Notification, UserNotification
 from .forms import RegistrationForm, PlaylistUnlockForm, LoginForm
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.utils import timezone
+from django.db import models
 
 User = get_user_model()
 
@@ -26,7 +28,6 @@ def registration_view(request):
                 with transaction.atomic():
                     user = form.save()
                     messages.success(request, f'✅ Account created successfully! Welcome {user.first_name}! Please login to continue.')
-                    # Don't auto-login, redirect to login page instead
                     return redirect('login')
             except Exception as e:
                 messages.error(request, f'Registration failed: {str(e)}')
@@ -56,6 +57,22 @@ def login_view(request):
             if user_auth is not None:
                 login(request, user_auth)
                 messages.success(request, f'Welcome back, {user_auth.first_name}!')
+                
+                # Clear any old session data
+                if 'login_notifications' in request.session:
+                    del request.session['login_notifications']
+                
+                # Check for notifications to show on login
+                notifications = get_user_notifications(user)
+                login_notifications = [n for n in notifications if n.get('show_on_login', False)]
+                if login_notifications:
+                    # Make sure all dates are strings
+                    for notification in login_notifications:
+                        if 'created_at' in notification and notification['created_at']:
+                            if hasattr(notification['created_at'], 'isoformat'):
+                                notification['created_at'] = notification['created_at'].isoformat()
+                    request.session['login_notifications'] = login_notifications
+                
                 return redirect('dashboard')
             else:
                 messages.error(request, 'Invalid email or password.')
@@ -81,11 +98,9 @@ def logout_view(request):
 def dashboard_view(request):
     user = request.user
     
-    # Redirect instructors to their dashboard
     if user.user_type == 'instructor':
         return redirect('instructor_dashboard')
     
-    # STUDENT DASHBOARD
     student_courses = user.courses.all()
     
     if not student_courses.exists():
@@ -99,10 +114,12 @@ def dashboard_view(request):
             'total_lessons': 0,
             'no_courses': True,
             'has_single_course': False,
+            'notifications': [],
+            'login_notifications': [],
+            'has_unread_notifications': False,
         }
         return render(request, 'portal/student_dashboard.html', context)
     
-    # Calculate if student has only one course
     has_single_course = student_courses.count() == 1
     
     courses_data = []
@@ -144,6 +161,12 @@ def dashboard_view(request):
     
     overall_progress = int((total_completed / total_lessons) * 100) if total_lessons > 0 else 0
     
+    # Get notifications (returns strings for dates)
+    notifications = get_user_notifications(user)
+    
+    # Get login notifications from session (if any)
+    login_notifications = request.session.pop('login_notifications', [])
+    
     context = {
         'user': user,
         'courses_data': courses_data,
@@ -153,7 +176,10 @@ def dashboard_view(request):
         'total_lessons': total_lessons,
         'no_courses': False,
         'has_single_course': has_single_course,
-        'single_course': courses_data[0] if has_single_course else None,  # For single course view
+        'single_course': courses_data[0] if has_single_course else None,
+        'notifications': notifications,
+        'login_notifications': login_notifications,
+        'has_unread_notifications': any(not n['is_read'] for n in notifications if not n['is_dismissed']),
     }
     
     return render(request, 'portal/student_dashboard.html', context)
@@ -161,7 +187,6 @@ def dashboard_view(request):
 
 @login_required
 def course_playlists_view(request, course_id):
-    """View playlists for a specific course - Click from student dashboard"""
     course = get_object_or_404(Course, id=course_id, students=request.user)
     
     playlists = Playlist.objects.filter(course=course)
@@ -176,7 +201,6 @@ def course_playlists_view(request, course_id):
         if is_unlocked:
             unlocked_playlist_ids.append(playlist.id)
     
-    # Calculate course progress
     course_lessons = Lesson.objects.filter(playlist__course=course)
     total = course_lessons.count()
     completed = CompletedLesson.objects.filter(
@@ -201,7 +225,6 @@ def course_playlists_view(request, course_id):
 @login_required
 @user_passes_test(is_instructor)
 def instructor_dashboard(request):
-    """Instructor Dashboard - Shows all students in their courses"""
     user = request.user
     instructor_courses = user.instructor_courses.all()
     
@@ -214,7 +237,6 @@ def instructor_dashboard(request):
         }
         return render(request, 'portal/instructor_dashboard.html', context)
     
-    # Get all students enrolled in these courses
     students = User.objects.filter(
         user_type='student',
         courses__in=instructor_courses
@@ -222,16 +244,9 @@ def instructor_dashboard(request):
     
     student_progress = []
     for student in students:
-        # Get the specific courses this student is enrolled in that the instructor teaches
         student_courses = student.courses.filter(id__in=instructor_courses)
-        
-        # Get all lessons for these specific courses
         course_lessons = Lesson.objects.filter(playlist__course__in=student_courses)
-        
-        # Count total lessons for this student's courses
         total_lessons = course_lessons.count()
-        
-        # Count completed lessons for this student in these courses
         completed_lessons = CompletedLesson.objects.filter(
             user=student,
             lesson__in=course_lessons
@@ -259,10 +274,8 @@ def instructor_dashboard(request):
 
 @login_required
 def admin_student_detail(request, student_id):
-    """View student details - Only instructors with access can view"""
     student = get_object_or_404(User, id=student_id, user_type='student')
     
-    # Check if instructor has access to this student
     if request.user.user_type == 'instructor':
         if not student.courses.filter(id__in=request.user.instructor_courses.all()).exists():
             messages.error(request, "You don't have permission to view this student.")
@@ -271,7 +284,6 @@ def admin_student_detail(request, student_id):
         messages.error(request, "You don't have permission to access this page.")
         return redirect('dashboard')
     
-    # Get completed lessons that are in the instructor's courses
     instructor_courses = request.user.instructor_courses.all()
     completed_lessons = CompletedLesson.objects.filter(
         user=student,
@@ -409,3 +421,105 @@ def check_access_code_valid(request):
         })
     except AccessCode.DoesNotExist:
         return JsonResponse({'valid': False})
+
+
+# ==============================================
+# NOTIFICATION FUNCTIONS
+# ==============================================
+
+def get_user_notifications(user):
+    """Get all notifications for a user"""
+    from django.db import models
+    
+    # Get active notifications
+    active_notifications = Notification.objects.filter(
+        is_active=True
+    ).filter(
+        models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())
+    )
+    
+    # Get user's notification status
+    user_notifications = UserNotification.objects.filter(user=user)
+    user_notification_ids = user_notifications.values_list('notification_id', flat=True)
+    
+    # Get dismissed notifications
+    dismissed_ids = user_notifications.filter(is_dismissed=True).values_list('notification_id', flat=True)
+    
+    # Prepare notification data
+    notifications_data = []
+    for notification in active_notifications:
+        is_dismissed = notification.id in dismissed_ids
+        is_read = False
+        if notification.id in user_notification_ids:
+            user_notif = user_notifications.get(notification_id=notification.id)
+            is_read = user_notif.is_read
+        
+        # Skip dismissed notifications (unless they're on login)
+        if is_dismissed and not notification.show_on_login:
+            continue
+            
+        # Convert datetime to string safely
+        created_at_str = None
+        if notification.created_at:
+            if hasattr(notification.created_at, 'isoformat'):
+                created_at_str = notification.created_at.isoformat()
+            else:
+                created_at_str = str(notification.created_at)
+            
+        notifications_data.append({
+            'id': notification.id,
+            'title': notification.title,
+            'message': notification.message,
+            'notification_type': notification.notification_type,
+            'created_at': created_at_str,
+            'is_read': is_read,
+            'is_dismissed': is_dismissed,
+            'show_on_login': notification.show_on_login,
+            'is_dismissible': notification.is_dismissible,
+        })
+    
+    return notifications_data
+
+
+@login_required
+def notification_mark_read(request, notification_id):
+    if request.method == 'POST':
+        try:
+            notification = get_object_or_404(Notification, id=notification_id)
+            user_notif, created = UserNotification.objects.get_or_create(
+                user=request.user,
+                notification=notification
+            )
+            user_notif.is_read = True
+            user_notif.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False})
+
+
+@login_required
+def notification_dismiss(request, notification_id):
+    if request.method == 'POST':
+        try:
+            notification = get_object_or_404(Notification, id=notification_id)
+            user_notif, created = UserNotification.objects.get_or_create(
+                user=request.user,
+                notification=notification
+            )
+            user_notif.is_dismissed = True
+            user_notif.dismissed_at = timezone.now()
+            user_notif.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False})
+
+
+@login_required
+def get_notifications_api(request):
+    notifications = get_user_notifications(request.user)
+    return JsonResponse({
+        'notifications': notifications,
+        'has_unread': any(not n['is_read'] for n in notifications if not n['is_dismissed'])
+    })

@@ -126,3 +126,56 @@ class CompletedLesson(models.Model):
 
     class Meta:
         unique_together = ('user', 'lesson')
+
+# Add to your models.py
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = (
+        ('system', 'System Alert'),
+        ('payment', 'Payment Alert'),
+        ('suspension', 'Suspension Warning'),
+        ('general', 'General Announcement'),
+    )
+    
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='general')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    show_on_login = models.BooleanField(default=False)  # Show when user logs in
+    show_on_dashboard = models.BooleanField(default=True)  # Show on dashboard
+    is_dismissible = models.BooleanField(default=True)  # User can dismiss
+    
+    def __str__(self):
+        return f"{self.title} - {self.notification_type}"
+    
+    def is_expired(self):
+        if self.expires_at:
+            from django.utils import timezone
+            return timezone.now() > self.expires_at
+        return False
+    
+    @classmethod
+    def get_active_notifications(cls, notification_type=None):
+        from django.utils import timezone
+        queryset = cls.objects.filter(
+            is_active=True
+        ).filter(
+            models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())
+        )
+        if notification_type:
+            queryset = queryset.filter(notification_type=notification_type)
+        return queryset
+
+class UserNotification(models.Model):
+    """Track which users have seen/dismissed which notifications"""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    notification = models.ForeignKey(Notification, on_delete=models.CASCADE)
+    is_read = models.BooleanField(default=False)
+    is_dismissed = models.BooleanField(default=False)
+    seen_at = models.DateTimeField(auto_now_add=True)
+    dismissed_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        unique_together = ('user', 'notification')

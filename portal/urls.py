@@ -9,7 +9,7 @@ urlpatterns = [
     path('suspended/', views.suspended_view, name='suspended'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
     
-    # New: View playlists for a specific course
+    # Course URLs
     path('course/<int:course_id>/playlists/', views.course_playlists_view, name='course_playlists'),
     
     path('unlock/<int:playlist_id>/', views.unlock_playlist_view, name='unlock_playlist'),
@@ -23,6 +23,11 @@ urlpatterns = [
     # AJAX endpoints
     path('check-email/', views.check_email_exists, name='check_email'),
     path('check-access-code/', views.check_access_code_valid, name='check_access_code'),
+    
+    # Notification URLs
+    path('notifications/mark-read/<int:notification_id>/', views.notification_mark_read, name='notification_mark_read'),
+    path('notifications/dismiss/<int:notification_id>/', views.notification_dismiss, name='notification_dismiss'),
+    path('notifications/api/', views.get_notifications_api, name='get_notifications_api'),
     
     # Password reset
     path('password-reset/', 
