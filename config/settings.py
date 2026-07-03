@@ -28,7 +28,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
-    'anymail',  # ← ADDED for Brevo API
     'portal',
 ]
 
@@ -146,16 +145,18 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 # ---------- ACTIVE: Console Backend (Prints to logs) ----------
 # This prints password reset links to Render logs
 # Admin can view logs and provide links to users
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # ---------- SMTP Configuration (Comment out to use) ----------
 # Uncomment the lines below and comment the console backend above
 # to enable real email sending with Gmail/your email provider
 
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'your-email@gmail.com')
-# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-# DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'your-email@gmail.com')
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False   # make sure this isn't also True — TLS and SSL don't mix on the same connection
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = f'Othello Institute of Technology <{EMAIL_HOST_USER}>'

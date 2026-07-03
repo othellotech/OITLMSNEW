@@ -2,30 +2,33 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinLengthValidator
 from django.conf import settings
+from django.utils import timezone
+
 
 class User(AbstractUser):
     USER_TYPES = (
         ('instructor', 'Instructor'),
         ('student', 'Student'),
     )
-    
+
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     email = models.EmailField(unique=True)
     user_type = models.CharField(max_length=20, choices=USER_TYPES, default='student')
     courses = models.ManyToManyField('Course', blank=True, related_name='students')
     instructor_courses = models.ManyToManyField('Course', blank=True, related_name='instructors')
-    
+
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.get_user_type_display()})"
-    
+
     @property
     def is_instructor(self):
         return self.user_type == 'instructor'
-    
+
     @property
     def is_student(self):
         return self.user_type == 'student'
+
 
 class Course(models.Model):
     title = models.CharField(max_length=100)
@@ -36,12 +39,13 @@ class Course(models.Model):
     def __str__(self):
         return self.title
 
+
 class AccessCode(models.Model):
     ACCESS_TYPES = (
         ('instructor', 'Instructor Access'),
         ('student', 'Student Access'),
     )
-    
+
     code = models.CharField(max_length=20, unique=True, validators=[MinLengthValidator(6)])
     course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True)
     access_type = models.CharField(max_length=20, choices=ACCESS_TYPES, default='student')
@@ -51,6 +55,7 @@ class AccessCode(models.Model):
 
     def __str__(self):
         return f"{self.code} -> {self.access_type}"
+
 
 class Playlist(models.Model):
     title = models.CharField(max_length=100)
@@ -63,7 +68,37 @@ class Playlist(models.Model):
     def __str__(self):
         return f"{self.title} ({self.course.title})"
 
+
+class PlaylistUnlock(models.Model):
+    """
+    Single source of truth: does this user have this playlist unlocked.
+
+    Populated automatically whenever a PlaylistAccessCode or
+    MultiPlaylistAccessCode is redeemed, and backfilled once from
+    pre-existing redeemed codes via a data migration. All "is this
+    unlocked" checks in views should query this table rather than
+    the access-code tables directly.
+    """
+    UNLOCK_SOURCES = (
+        ('single_code', 'Single Playlist Code'),
+        ('multi_code', 'Multi Playlist Code'),
+        ('manual', 'Manually Granted'),
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='playlist_unlocks')
+    playlist = models.ForeignKey(Playlist, on_delete=models.CASCADE, related_name='unlocks')
+    source = models.CharField(max_length=20, choices=UNLOCK_SOURCES, default='manual')
+    unlocked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'playlist')
+
+    def __str__(self):
+        return f"{self.user} -> {self.playlist} ({self.source})"
+
+
 class PlaylistAccessCode(models.Model):
+    """Legacy single-playlist code. Still fully supported."""
     code = models.CharField(max_length=20, unique=True, validators=[MinLengthValidator(6)])
     playlist = models.ForeignKey(Playlist, on_delete=models.CASCADE)
     is_used = models.BooleanField(default=False)
@@ -71,6 +106,54 @@ class PlaylistAccessCode(models.Model):
 
     def __str__(self):
         return f"{self.code} -> {self.playlist.title}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.is_used and self.user_id:
+            PlaylistUnlock.objects.get_or_create(
+                user_id=self.user_id, playlist_id=self.playlist_id,
+                defaults={'source': 'single_code'}
+            )
+
+
+class MultiPlaylistAccessCode(models.Model):
+    """
+    One code that unlocks one or more playlists (any mix, any courses)
+    for whoever redeems it. Create/manage these from Django admin --
+    use the playlists multi-select to choose exactly which playlist(s)
+    a code grants (works fine with just one playlist selected too).
+    """
+    code = models.CharField(max_length=20, unique=True, validators=[MinLengthValidator(6)])
+    playlists = models.ManyToManyField(Playlist, related_name='multi_access_codes')
+    is_used = models.BooleanField(default=False)
+    used_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='multi_access_codes_used'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        names = ", ".join(p.title for p in self.playlists.all()[:3])
+        extra = self.playlists.count() - 3
+        if extra > 0:
+            names += f" (+{extra} more)"
+        return f"{self.code} -> {names or 'no playlists selected'}"
+
+    def redeem(self, user):
+        """Marks the code used and unlocks every attached playlist for user.
+        Returns the list of Playlist objects that were unlocked."""
+        playlists = list(self.playlists.all())
+        for playlist in playlists:
+            PlaylistUnlock.objects.get_or_create(
+                user=user, playlist=playlist, defaults={'source': 'multi_code'}
+            )
+        self.is_used = True
+        self.used_by = user
+        self.used_at = timezone.now()
+        self.save()
+        return playlists
+
 
 class Lesson(models.Model):
     title = models.CharField(max_length=200)
@@ -85,10 +168,10 @@ class Lesson(models.Model):
     def clean_youtube_url(self):
         if not self.video_url:
             return self.video_url
-            
+
         url = self.video_url
         url = url.replace('www.', '')
-        
+
         if 'youtu.be' in url:
             video_id = url.split('/')[-1].split('?')[0]
             return f'https://www.youtube-nocookie.com/embed/{video_id}'
@@ -108,9 +191,9 @@ class Lesson(models.Model):
             elif 'open?id=' in url:
                 file_id = url.split('open?id=')[1].split('&')[0]
                 return f'https://drive.google.com/uc?export=download&id={file_id}'
-        
+
         return url
-    
+
     def save(self, *args, **kwargs):
         if self.video_url:
             self.video_url = self.clean_youtube_url()
@@ -119,6 +202,7 @@ class Lesson(models.Model):
     def __str__(self):
         return self.title
 
+
 class CompletedLesson(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE)
@@ -126,6 +210,7 @@ class CompletedLesson(models.Model):
 
     class Meta:
         unique_together = ('user', 'lesson')
+
 
 # Add to your models.py
 
@@ -136,7 +221,7 @@ class Notification(models.Model):
         ('suspension', 'Suspension Warning'),
         ('general', 'General Announcement'),
     )
-    
+
     title = models.CharField(max_length=200)
     message = models.TextField()
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='general')
@@ -146,16 +231,16 @@ class Notification(models.Model):
     show_on_login = models.BooleanField(default=False)  # Show when user logs in
     show_on_dashboard = models.BooleanField(default=True)  # Show on dashboard
     is_dismissible = models.BooleanField(default=True)  # User can dismiss
-    
+
     def __str__(self):
         return f"{self.title} - {self.notification_type}"
-    
+
     def is_expired(self):
         if self.expires_at:
             from django.utils import timezone
             return timezone.now() > self.expires_at
         return False
-    
+
     @classmethod
     def get_active_notifications(cls, notification_type=None):
         from django.utils import timezone
@@ -168,6 +253,7 @@ class Notification(models.Model):
             queryset = queryset.filter(notification_type=notification_type)
         return queryset
 
+
 class UserNotification(models.Model):
     """Track which users have seen/dismissed which notifications"""
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -176,6 +262,6 @@ class UserNotification(models.Model):
     is_dismissed = models.BooleanField(default=False)
     seen_at = models.DateTimeField(auto_now_add=True)
     dismissed_at = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         unique_together = ('user', 'notification')

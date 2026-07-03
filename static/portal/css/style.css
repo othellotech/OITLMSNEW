@@ -956,3 +956,212 @@ input.error {
         padding-top: 160px !important;
     }
 }
+
+
+/* ============ COURSE OUTLINE — BOOK-CATALOG TREE STYLE ============ */
+.outline-section {
+    background: var(--white);
+    padding: 1.8rem 2.2rem;
+    border-radius: 20px;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow);
+    width: 100%;
+}
+
+.outline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.outline-header h3 {
+    color: var(--navy-blue);
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.outline-chevron {
+    color: var(--navy-blue);
+    font-size: 1.1rem;
+    transition: transform 0.3s ease;
+}
+
+.outline-chevron.open {
+    transform: rotate(180deg);
+}
+
+.outline-body {
+    margin-top: 1.3rem;
+    border-top: 1px solid var(--soft-gray);
+    padding-top: 1.2rem;
+    width: 100%;
+}
+
+/* --- top-level course node --- */
+.outline-course-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--soft-gray);
+    padding: 0.8rem 1.1rem;
+    border-radius: 10px;
+    font-weight: 700;
+    color: var(--navy-blue);
+    font-size: 1.05rem;
+    cursor: pointer;
+    margin-bottom: 0.4rem;
+    margin-top: 1rem;
+}
+
+/* --- tree wrapper: vertical guide line running down the left, like a book index --- */
+.outline-tree {
+    position: relative;
+    margin-left: 14px;
+    padding-left: 22px;
+    border-left: 2px dashed var(--soft-gray);
+}
+
+.outline-lessons.outline-tree {
+    border-left: 2px dashed #f0d97a;
+}
+
+/* --- each playlist "chapter" row --- */
+.outline-playlist {
+    position: relative;
+    margin: 0.6rem 0;
+}
+
+/* horizontal branch connecting the vertical guide to this row */
+.outline-playlist::before {
+    content: '';
+    position: absolute;
+    left: -22px;
+    top: 18px;
+    width: 22px;
+    height: 2px;
+    background: var(--soft-gray);
+}
+
+.outline-playlist-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    cursor: pointer;
+    padding: 0.5rem 0.4rem;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+}
+
+.outline-playlist-header:hover {
+    background: #f8f9fa;
+}
+
+.outline-playlist-name {
+    font-weight: 600;
+    color: var(--navy-blue);
+    font-size: 1rem;
+}
+
+/* dotted "book index" leader line between title and count */
+.outline-connector {
+    flex: 1 1 40px;
+    border-bottom: 1px dotted #ccc;
+    height: 0;
+    align-self: center;
+    min-width: 20px;
+}
+
+.outline-count {
+    color: #888;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.outline-chevron-sm {
+    font-size: 0.75rem;
+    color: #aaa;
+    margin-left: 4px;
+}
+
+/* --- lesson "page" rows --- */
+.outline-lesson {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    padding: 0.45rem 0.4rem;
+    font-size: 0.95rem;
+    color: #444;
+    line-height: 1.4;
+}
+
+.outline-lesson::before {
+    content: '';
+    position: absolute;
+    left: -22px;
+    top: 17px;
+    width: 22px;
+    height: 2px;
+    background: #f0d97a;
+}
+
+.outline-lesson-name {
+    word-break: break-word;
+}
+
+.outline-lesson.completed .outline-lesson-name {
+    color: #2e7d32;
+}
+
+.outline-status {
+    color: #2e7d32;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.outline-lesson-empty {
+    font-size: 0.88rem;
+    color: #999;
+    font-style: italic;
+    padding: 0.4rem 0;
+}
+
+.outline-node-icon {
+    flex-shrink: 0;
+}
+
+.outline-goto-wrap {
+    margin: 0.5rem 0 0.8rem 0;
+}
+
+.outline-goto-btn {
+    display: inline-block;
+    background: var(--warm-yellow);
+    color: var(--navy-blue);
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .outline-section {
+        padding: 1.3rem;
+    }
+    .outline-tree {
+        margin-left: 8px;
+        padding-left: 16px;
+    }
+    .outline-playlist::before,
+    .outline-lesson::before {
+        left: -16px;
+        width: 16px;
+    }
+}

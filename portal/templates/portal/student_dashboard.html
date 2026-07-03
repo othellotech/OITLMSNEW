@@ -82,7 +82,65 @@
                 <h2>You are enrolled in {{ total_courses }} course(s)</h2>
             {% endif %}
             <p>Continue your learning journey</p>
+            
         </div>
+
+<!-- COURSE OUTLINE SECTION (book-catalog / tree style, expandable) -->
+{% if courses_data %}
+<div class="outline-section">
+    <div class="outline-header" onclick="toggleOutlineSection()">
+        <h3>📘 Course Outline</h3>
+        <span id="outlineChevron" class="outline-chevron">▼</span>
+    </div>
+    <div id="outlineBody" class="outline-body" style="display:none;">
+        {% for course_data in courses_data %}
+            <div class="outline-course">
+                {% if not has_single_course %}
+                    <div class="outline-course-title" onclick="toggleOutlineCourse('course-{{ course_data.course.id }}')">
+                        <span class="outline-node-icon">📂</span>
+                        <span class="outline-course-name">{{ course_data.course.title }}</span>
+                        <span class="outline-chevron-sm">▼</span>
+                    </div>
+                {% endif %}
+                <div id="course-{{ course_data.course.id }}" class="outline-tree outline-playlists" {% if not has_single_course %}style="display:none;"{% endif %}>
+                    {% for item in course_data.outline %}
+                        <div class="outline-playlist">
+                            <div class="outline-playlist-header" onclick="toggleOutlinePlaylist('playlist-{{ item.playlist.id }}')">
+                                <span class="outline-node-icon">{% if item.is_unlocked %}🔓{% else %}🔒{% endif %}</span>
+                                <span class="outline-playlist-name">{{ item.playlist.title }}</span>
+                                <span class="outline-connector"></span>
+                                <span class="outline-count">{{ item.completed_count }}/{{ item.lesson_count }}</span>
+                                <span class="outline-chevron-sm">▼</span>
+                            </div>
+                            <div id="playlist-{{ item.playlist.id }}" class="outline-tree outline-lessons" style="display:none;">
+                                {% if item.lessons %}
+                                    {% for entry in item.lessons %}
+                                        <div class="outline-lesson {% if entry.is_completed %}completed{% endif %}">
+                                           <span class="outline-node-icon">{% if entry.is_completed %}🎓{% else %}💻{% endif %}</span>
+                                            <span class="outline-lesson-name">{{ entry.lesson.title }}</span>
+                                            <span class="outline-connector"></span>
+                                            {% if entry.is_completed %}<span class="outline-status">Done</span>{% endif %}
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="outline-lesson-empty">No lessons added yet.</div>
+                                {% endif %}
+                                <div class="outline-goto-wrap">
+                                {% if item.is_unlocked %}
+                                    <a href="{% url 'playlist_lessons' item.playlist.id %}" class="outline-goto-btn">▶️ Go to playlist</a>
+                                {% else %}
+                                    <a href="{% url 'unlock_playlist' item.playlist.id %}" class="outline-goto-btn">🔓 Unlock</a>
+                                {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
         
         <!-- NOTIFICATIONS SECTION -->
         {% if notifications %}
@@ -458,5 +516,24 @@ document.addEventListener('click', function(event) {
 document.addEventListener('DOMContentLoaded', function() {
     updateNotificationDot();
 });
+
+function toggleOutlineSection() {
+    const body = document.getElementById('outlineBody');
+    const chevron = document.getElementById('outlineChevron');
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    chevron.classList.toggle('open', !isOpen);
+}
+
+function toggleOutlineCourse(id) {
+    const el = document.getElementById(id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleOutlinePlaylist(id) {
+    const el = document.getElementById(id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
 </script>
 {% endblock %}

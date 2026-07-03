@@ -50,6 +50,7 @@
                         <th style="padding: 12px; text-align: left;">Email</th>
                         <th style="padding: 12px; text-align: left;">Courses</th>
                         <th style="padding: 12px; text-align: center;">Progress</th>
+                        <th style="padding: 12px; text-align: center;">Unlocked Playlists</th>
                         <th style="padding: 12px; text-align: center;">Actions</th>
                     </tr>
                 </thead>
@@ -76,6 +77,17 @@
                                 <span style="font-weight: bold; min-width: 45px;">{{ item.progress }}%</span>
                             </div>
                             <small style="color: #888;">{{ item.completed }}/{{ item.total }} lessons</small>
+                        </td>
+                        <td style="padding: 12px; text-align: center;">
+                            <span style="font-weight: bold; color: var(--navy-blue);">{{ item.unlocked_playlists }}/{{ item.total_playlists }}</span>
+                            <br><small style="color: #888;">playlists unlocked</small>
+                            {% if item.playlist_breakdown|length > 1 %}
+                                <div style="margin-top: 6px; text-align: left; display: inline-block;">
+                                    {% for b in item.playlist_breakdown %}
+                                        <div style="font-size: 11px; color: #666; white-space: nowrap;">{{ b.course.title }}: <strong>{{ b.unlocked }}/{{ b.total }}</strong></div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </td>
                         <td style="padding: 12px; text-align: center;">
                             <a href="{% url 'admin_student_detail' item.student.id %}" style="background: var(--warm-yellow); padding: 5px 10px; border-radius: 5px; text-decoration: none; color: var(--navy-blue); font-size: 12px;">
