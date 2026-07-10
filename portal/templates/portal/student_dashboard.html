@@ -22,8 +22,11 @@
                     <span style="position: absolute; top: -6px; right: -6px; background: #f44336; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; display: flex; align-items: center; justify-content: center; font-weight: bold;">{{ my_tasks_count }}</span>
                 {% endif %}
             </a>
-            <a href="{% url 'student_grades' %}" style="color: var(--navy-blue); font-weight: 600; text-decoration: none; padding: 0.5rem 0.8rem; border-radius: 8px; background: var(--soft-gray);">
+            <a href="{% url 'student_grades' %}" style="position: relative; color: var(--navy-blue); font-weight: 600; text-decoration: none; padding: 0.5rem 0.8rem; border-radius: 8px; background: var(--soft-gray);">
                 🏆 Grades
+                {% if rejected_lesson_tasks_count %}
+                    <span style="position: absolute; top: -6px; right: -6px; background: #f44336; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; display: flex; align-items: center; justify-content: center; font-weight: bold;">!</span>
+                {% endif %}
             </a>
             <span style="color: var(--navy-blue); font-weight: 500;">👋 {{ user.first_name }} {{ user.last_name }}</span>
             <a href="{% url 'logout' %}" 

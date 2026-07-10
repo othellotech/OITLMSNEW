@@ -9,14 +9,18 @@
             <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| Assign Task</span></h2>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
+<a href="{% url 'instructor_assigned_tasks_list' %}" style="color: var(--navy-blue); font-weight: 600; text-decoration: none; margin-right: 20px;">📂 All Assigned Tasks</a>
             <a href="{% url 'instructor_approvals' %}" style="color: var(--navy-blue); font-weight: 600; text-decoration: none;">← Back to My Tasks</a>
         </div>
     </nav>
 
     <div class="main-content" style="padding-top: 90px;">
         <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 640px;">
-            <h1 style="color: var(--navy-blue);">➕ Assign a Task</h1>
-            <p style="color: #666;">Give a specific student a practical task with instructions and (optionally) a reference link. They'll submit their own link back for you to review.</p>
+            <h1 style="color: var(--navy-blue);">➕ {% if prefill %}Reuse & Assign{% else %}Assign a Task{% endif %}</h1>
+            <p style="color: #666;">Give one or more students a practical task with instructions and (optionally) a reference link. They'll submit their own link back for you to review.</p>
+            {% if prefill %}
+            <p style="background: #e3f2fd; color: var(--navy-blue); padding: 10px 14px; border-radius: 8px; font-size: 13px;">Reusing "{{ prefill.title }}" -- just pick the student(s) and course below, then adjust anything you like.</p>
+            {% endif %}
 
             <form method="post">
                 {% csrf_token %}
@@ -24,7 +28,7 @@
                 <label style="display: block; font-weight: 600; margin: 16px 0 6px;">Course</label>
                 <select name="course_id" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--soft-gray);">
                     {% for course in courses %}
-                    <option value="{{ course.id }}">{{ course.title }}</option>
+                    <option value="{{ course.id }}" {% if prefill and prefill.course_id == course.id %}selected{% endif %}>{{ course.title }}</option>
                     {% endfor %}
                 </select>
 
@@ -42,15 +46,15 @@
                 <p style="font-size: 12px; color: #888; margin: 6px 0 0 0;">Tick one or more students -- the same task will be assigned to everyone selected.</p>
 
                 <label style="display: block; font-weight: 600; margin: 16px 0 6px;">Title</label>
-                <input type="text" name="title" required placeholder="e.g. Build a login form"
+                <input type="text" name="title" required placeholder="e.g. Build a login form" value="{{ prefill.title|default:'' }}"
                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--soft-gray);">
 
                 <label style="display: block; font-weight: 600; margin: 16px 0 6px;">Instructions</label>
                 <textarea name="instructions" required rows="5" placeholder="Describe exactly what the student needs to do..."
-                          style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--soft-gray);"></textarea>
+                          style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--soft-gray);">{{ prefill.instructions|default:'' }}</textarea>
 
                 <label style="display: block; font-weight: 600; margin: 16px 0 6px;">Reference Link (optional)</label>
-                <input type="url" name="resource_link" placeholder="e.g. a Google Drive PDF link"
+                <input type="url" name="resource_link" placeholder="e.g. a Google Drive PDF link" value="{{ prefill.resource_link|default:'' }}"
                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--soft-gray);">
 
                 <label style="display: block; font-weight: 600; margin: 16px 0 6px;">Prerequisite (optional)</label>
@@ -58,10 +62,10 @@
                     <select name="required_playlist_id" style="flex: 2; min-width: 200px; padding: 10px; border-radius: 8px; border: 1px solid var(--soft-gray);">
                         <option value="">No prerequisite playlist</option>
                         {% for playlist in playlists %}
-                        <option value="{{ playlist.id }}">{{ playlist.course.title }} — {{ playlist.title }}</option>
+                        <option value="{{ playlist.id }}" {% if prefill and prefill.required_playlist_id == playlist.id %}selected{% endif %}>{{ playlist.course.title }} — {{ playlist.title }}</option>
                         {% endfor %}
                     </select>
-                    <input type="number" name="required_lesson_count" min="1" placeholder="e.g. 10"
+                    <input type="number" name="required_lesson_count" min="1" placeholder="e.g. 10" value="{{ prefill.required_lesson_count|default:'' }}"
                            style="flex: 1; min-width: 120px; padding: 10px; border-radius: 8px; border: 1px solid var(--soft-gray);">
                 </div>
                 <p style="font-size: 12px; color: #888; margin: 6px 0 0 0;">If you pick a playlist, also set how many of its lessons the student must complete before this task appears on their dashboard.</p>

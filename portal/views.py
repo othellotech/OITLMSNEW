@@ -1223,12 +1223,91 @@ def instructor_assign_task_view(request):
             messages.success(request, f'Task assigned to {selected_students.count()} student(s).')
             return redirect('instructor_approvals')
 
+    prefill = None
+    reuse_id = request.GET.get('reuse')
+    if reuse_id and request.method == 'GET':
+        source_task = AssignedTask.objects.filter(id=reuse_id, instructor=request.user).first()
+        if source_task:
+            prefill = source_task
+
     context = {
         'students': students,
         'courses': instructor_courses,
         'playlists': playlists,
+        'prefill': prefill,
     }
     return render(request, 'portal/instructor_assign_task.html', context)
+
+
+@login_required
+@user_passes_test(is_instructor)
+def instructor_assigned_tasks_list_view(request):
+    """Full list of every assigned task this instructor has ever created,
+    regardless of status -- so they can find one to edit, delete, or reuse
+    (assign the same task content to a different set of students)."""
+    tasks = AssignedTask.objects.filter(instructor=request.user).select_related(
+        'student', 'course', 'required_playlist'
+    ).order_by('-assigned_at')
+
+    pending_approvals_count = Submission.objects.filter(
+        status='pending', task__lesson__playlist__course__in=request.user.instructor_courses.all()
+    ).count()
+    pending_assigned_tasks_count = AssignedTask.objects.filter(
+        instructor=request.user, status='submitted'
+    ).count()
+
+    context = {
+        'assigned_tasks': tasks,
+        'pending_approvals_count': pending_approvals_count,
+        'pending_assigned_tasks_count': pending_assigned_tasks_count,
+    }
+    return render(request, 'portal/instructor_assigned_tasks_list.html', context)
+
+
+@login_required
+@user_passes_test(is_instructor)
+def instructor_edit_assigned_task_view(request, assigned_task_id):
+    """Edit an assigned task's details (title/instructions/link/prerequisite).
+    Does not touch the student's submission or grading status."""
+    assigned_task = get_object_or_404(AssignedTask, id=assigned_task_id, instructor=request.user)
+    instructor_courses = request.user.instructor_courses.all()
+    playlists = Playlist.objects.filter(course__in=instructor_courses)
+
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        instructions = request.POST.get('instructions', '').strip()
+        resource_link = request.POST.get('resource_link', '').strip()
+        required_playlist_id = request.POST.get('required_playlist_id') or None
+        raw_required_count = request.POST.get('required_lesson_count', '').strip()
+        required_lesson_count = int(raw_required_count) if raw_required_count.isdigit() else None
+
+        if not title or not instructions:
+            messages.error(request, 'Please provide at least a title and instructions.')
+        else:
+            assigned_task.title = title
+            assigned_task.instructions = instructions
+            assigned_task.resource_link = resource_link
+            assigned_task.required_playlist_id = required_playlist_id
+            assigned_task.required_lesson_count = required_lesson_count if required_playlist_id else None
+            assigned_task.save()
+            messages.success(request, 'Task updated.')
+            return redirect('instructor_assigned_tasks_list')
+
+    context = {
+        'assigned_task': assigned_task,
+        'playlists': playlists,
+    }
+    return render(request, 'portal/instructor_edit_assigned_task.html', context)
+
+
+@login_required
+@user_passes_test(is_instructor)
+def instructor_delete_assigned_task_view(request, assigned_task_id):
+    assigned_task = get_object_or_404(AssignedTask, id=assigned_task_id, instructor=request.user)
+    if request.method == 'POST':
+        assigned_task.delete()
+        messages.success(request, 'Assigned task deleted.')
+    return redirect('instructor_assigned_tasks_list')
 
 
 @require_http_methods(["GET"])

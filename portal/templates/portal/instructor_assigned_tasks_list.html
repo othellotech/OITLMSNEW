@@ -1,0 +1,79 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-container">
+    <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+        <div class="navbar-brand">
+            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid var(--warm-yellow);">
+            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| Assigned Tasks</span></h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            {% include 'portal/_instructor_bell.html' %}
+            <a href="{% url 'instructor_approvals' %}" style="color: var(--navy-blue); font-weight: 600; text-decoration: none;">← Back to My Tasks</a>
+        </div>
+    </nav>
+
+    <div class="main-content" style="padding-top: 90px;">
+        <div class="welcome-card" style="display:flex; justify-content: space-between; align-items:center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <h1>📂 All Assigned Tasks</h1>
+                <p>Every task you've ever assigned, whatever its status -- edit, delete, or reuse any of them here.</p>
+            </div>
+            <a href="{% url 'instructor_assign_task' %}" class="btn" style="background: white; color: var(--navy-blue);">➕ Assign New Task</a>
+        </div>
+
+        <div style="background: white; border-radius: 15px; overflow: auto; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            {% if assigned_tasks %}
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--navy-blue); color: white;">
+                        <th style="padding: 10px; text-align: left;">Task</th>
+                        <th style="padding: 10px; text-align: left;">Student</th>
+                        <th style="padding: 10px; text-align: left;">Course</th>
+                        <th style="padding: 10px; text-align: left;">Prerequisite</th>
+                        <th style="padding: 10px; text-align: center;">Status</th>
+                        <th style="padding: 10px; text-align: center;">Score</th>
+                        <th style="padding: 10px; text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for at in assigned_tasks %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 10px;">{{ at.title }}</td>
+                        <td style="padding: 10px;">
+                            {{ at.student.get_full_name }}
+                            <br><small style="color: #888;">{{ at.student.email }}</small>
+                        </td>
+                        <td style="padding: 10px;">{{ at.course.title }}</td>
+                        <td style="padding: 10px; font-size: 12px; color: #666;">
+                            {% if at.required_playlist %}{{ at.required_playlist.title }} ({{ at.required_lesson_count|default:"all" }} lessons){% else %}—{% endif %}
+                        </td>
+                        <td style="padding: 10px; text-align: center;">
+                            {% if at.status == 'approved' %}<span style="color: #2e7d32; font-weight: 600; font-size: 12px;">✓ Approved</span>
+                            {% elif at.status == 'rejected' %}<span style="color: #c62828; font-weight: 600; font-size: 12px;">✗ Rejected</span>
+                            {% elif at.status == 'submitted' %}<span style="color: #ef6c00; font-weight: 600; font-size: 12px;">⏳ Pending Review</span>
+                            {% else %}<span style="color: #888; font-size: 12px;">📌 Not Submitted</span>{% endif %}
+                        </td>
+                        <td style="padding: 10px; text-align: center; font-size: 12px;">{% if at.score %}{{ at.score }}/100{% else %}—{% endif %}</td>
+                        <td style="padding: 10px; text-align: center; white-space: nowrap;">
+                            <a href="{% url 'instructor_edit_assigned_task' at.id %}" style="font-size: 12px; color: var(--navy-blue); margin-right: 8px;">Edit</a>
+                            <a href="{% url 'instructor_assign_task' %}?reuse={{ at.id }}" style="font-size: 12px; color: var(--navy-blue); margin-right: 8px;">Reuse</a>
+                            <form method="post" action="{% url 'instructor_delete_assigned_task' at.id %}" style="display:inline;" onsubmit="return confirm('Delete this assigned task? This cannot be undone.');">
+                                {% csrf_token %}
+                                <button type="submit" style="font-size: 12px; color: #f44336; background: none; border: none; cursor: pointer; padding: 0; text-decoration: underline;">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="padding: 40px; text-align: center; color: #888;">
+                <p>You haven't assigned any tasks yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

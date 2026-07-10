@@ -38,7 +38,7 @@
         {% endif %}
         {% if rejected_count > 0 %}
         <div style="background: #ffebee; border: 1px solid #f44336; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; color: #c62828; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <span>✗ You have <strong>{{ rejected_count }}</strong> submission(s) that were rejected and need resubmission.</span>
+            <span>✗ You have <strong>{{ rejected_count }}</strong> lesson task submission(s) that were rejected and need review. You won't be able to proceed to new lessons until you resubmit.</span>
             {% if first_rejected %}
             <a href="{% url 'task_detail' first_rejected.task.lesson.playlist.id first_rejected.task.lesson.id first_rejected.task.id %}" class="btn" style="background: #f44336; padding: 8px 16px;">Resolve Now</a>
             {% endif %}

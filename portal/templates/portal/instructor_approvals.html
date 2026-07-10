@@ -23,6 +23,7 @@
                 <h1>📝 My Tasks</h1>
                 <p>Once you approve or reject an item, it leaves this page -- you can still find and revisit it later from that student's "View Details" page.</p>
             </div>
+            <a href="{% url 'instructor_assigned_tasks_list' %}" class="btn" style="background: white; color: var(--navy-blue);">📂 All Assigned Tasks</a>
             <a href="{% url 'instructor_assign_task' %}" class="btn" style="background: white; color: var(--navy-blue);">➕ Assign New Task</a>
         </div>
 
