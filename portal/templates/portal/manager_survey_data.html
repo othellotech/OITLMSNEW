@@ -1,0 +1,125 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-container">
+    <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+        <div class="navbar-brand">
+            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid var(--warm-yellow);">
+            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| Survey Data</span></h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="{% url 'manager_dashboard' %}" class="logout-btn" style="background: #6c757d; padding: 0.5rem 1.2rem;">&larr; Dashboard</a>
+            <a href="{% url 'logout' %}" class="logout-btn" style="padding: 0.5rem 1.2rem;" onclick="return confirm('Are you sure you want to logout?');">🚪 Logout</a>
+        </div>
+    </nav>
+
+    <div class="main-content" style="padding-top: 90px;">
+        <div class="welcome-card">
+            <h1>📋 Survey Data</h1>
+            <p>Rating breakdown per instructor and per course. Student identities stay anonymous.</p>
+        </div>
+
+        <!-- Per-instructor breakdown -->
+        <h2>⭐ Rating Breakdown by Instructor</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
+            {% for item in instructor_breakdown %}
+            <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <h3 style="color: var(--navy-blue); margin-bottom: 8px;">{{ item.instructor.get_full_name }}</h3>
+                {% if item.avg_score is not None %}
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <span style="padding: 4px 12px; border-radius: 20px; font-weight: bold; color: white;
+                        background: {% if item.color == 'red' %}#e74c3c{% elif item.color == 'yellow' %}#f2c94c{% else %}#27ae60{% endif %};">
+                        {{ item.avg_score }} / 10
+                    </span>
+                    <span style="color: #888; font-size: 0.85rem;">{{ item.count }} response{{ item.count|pluralize }}</span>
+                </div>
+                {% if item.course_breakdown %}
+                <div style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+                    {% for cb in item.course_breakdown %}
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; color: #555;">
+                        <span>{{ cb.course__title }}</span>
+                        <span><strong>{{ cb.avg_score|floatformat:1 }}</strong>/10 ({{ cb.count }})</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% else %}
+                <div style="color: #888; font-size: 0.9rem;">No ratings yet</div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div style="background: white; border-radius: 15px; padding: 30px; text-align: center; color: #888; grid-column: 1 / -1;">
+                No instructors found.
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Filters -->
+        <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px;">
+            <form method="get" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--navy-blue); font-weight: 600; margin-bottom: 4px;">Instructor</label>
+                    <select name="instructor" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd;">
+                        <option value="">All instructors</option>
+                        {% for inst in instructors %}
+                        <option value="{{ inst.id }}" {% if selected_instructor == inst.id|stringformat:"s" %}selected{% endif %}>{{ inst.get_full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--navy-blue); font-weight: 600; margin-bottom: 4px;">Course</label>
+                    <select name="course" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd;">
+                        <option value="">All courses</option>
+                        {% for c in courses %}
+                        <option value="{{ c.id }}" {% if selected_course == c.id|stringformat:"s" %}selected{% endif %}>{{ c.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" style="background: var(--warm-yellow); color: var(--navy-blue); border: none; padding: 9px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">Filter</button>
+                {% if selected_instructor or selected_course %}
+                <a href="{% url 'manager_survey_data' %}" style="color: #888; font-size: 0.85rem; padding: 9px 0;">Clear filters</a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Individual survey responses (anonymous) -->
+        <h2>📝 Survey Responses <span style="font-size: 1rem; color: #888; font-weight: normal;">({{ total_filtered }})</span></h2>
+        <div style="background: white; border-radius: 15px; overflow: auto; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            {% if ratings %}
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--navy-blue); color: white;">
+                        <th style="padding: 12px; text-align: left;">Instructor</th>
+                        <th style="padding: 12px; text-align: left;">Course</th>
+                        <th style="padding: 12px; text-align: center;">Rating</th>
+                        <th style="padding: 12px; text-align: left;">Comment</th>
+                        <th style="padding: 12px; text-align: center;">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rating in ratings %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 12px;">{{ rating.instructor.get_full_name }}</td>
+                        <td style="padding: 12px;">{{ rating.course.title }}</td>
+                        <td style="padding: 12px; text-align: center;">
+                            <span style="padding: 3px 10px; border-radius: 20px; font-weight: bold; color: white; font-size: 0.8rem;
+                                background: {% if rating.score < 3 %}#e74c3c{% elif rating.score < 7 %}#f2c94c{% else %}#27ae60{% endif %};">
+                                {{ rating.score }}/10
+                            </span>
+                        </td>
+                        <td style="padding: 12px; color: #555; font-size: 0.85rem;">{{ rating.comment|default:"—" }}</td>
+                        <td style="padding: 12px; text-align: center; color: #888; font-size: 0.8rem;">{{ rating.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="padding: 40px; text-align: center; color: #888;">
+                No survey responses match this filter yet.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

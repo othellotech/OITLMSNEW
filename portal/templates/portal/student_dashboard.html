@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block content %}
+{% include 'portal/_survey_overlay.html' %}
 <div class="dashboard-container">
     <!-- FIXED NAVIGATION BAR -->
     <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
@@ -15,6 +16,15 @@
                 <span style="font-size: 24px;">🔔</span>
                 <span id="notificationDot" class="notification-dot" style="position: absolute; top: -5px; right: -5px; background: #f44336; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: {% if has_unread_notifications %}flex{% else %}none{% endif %}; align-items: center; justify-content: center; font-weight: bold;">{{ notifications|length }}</span>
             </div>
+            <a href="{% url 'student_tasks' %}" style="position: relative; color: var(--navy-blue); font-weight: 600; text-decoration: none; padding: 0.5rem 0.8rem; border-radius: 8px; background: var(--soft-gray);">
+                📌 My Tasks
+                {% if my_tasks_count %}
+                    <span style="position: absolute; top: -6px; right: -6px; background: #f44336; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; display: flex; align-items: center; justify-content: center; font-weight: bold;">{{ my_tasks_count }}</span>
+                {% endif %}
+            </a>
+            <a href="{% url 'student_grades' %}" style="color: var(--navy-blue); font-weight: 600; text-decoration: none; padding: 0.5rem 0.8rem; border-radius: 8px; background: var(--soft-gray);">
+                🏆 Grades
+            </a>
             <span style="color: var(--navy-blue); font-weight: 500;">👋 {{ user.first_name }} {{ user.last_name }}</span>
             <a href="{% url 'logout' %}" 
                class="logout-btn" 

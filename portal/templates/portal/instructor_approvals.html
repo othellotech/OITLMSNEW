@@ -1,0 +1,152 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-container">
+    <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+        <div class="navbar-brand">
+            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid var(--warm-yellow);">
+            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| My Tasks</span></h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            {% include 'portal/_instructor_bell.html' %}
+            <span style="color: var(--navy-blue); font-weight: 500;">👋 {{ user.first_name }} {{ user.last_name }}</span>
+            <a href="{% url 'logout' %}" class="logout-btn" style="padding: 0.5rem 1.2rem;" onclick="return confirm('Are you sure you want to logout?');">🚪 Logout</a>
+        </div>
+    </nav>
+
+    <div class="main-content" style="padding-top: 90px;">
+        {% include 'portal/_instructor_tabs.html' with active='tasks' %}
+
+        <div class="welcome-card" style="display:flex; justify-content: space-between; align-items:center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <h1>📝 My Tasks</h1>
+                <p>Once you approve or reject an item, it leaves this page -- you can still find and revisit it later from that student's "View Details" page.</p>
+            </div>
+            <a href="{% url 'instructor_assign_task' %}" class="btn" style="background: white; color: var(--navy-blue);">➕ Assign New Task</a>
+        </div>
+
+        <!-- LESSON TASK SUBMISSIONS -->
+        <h2>📋 Lesson Task Submissions</h2>
+        {% if pending_submissions %}
+        <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+            <form method="post" action="{% url 'approve_all_submissions' %}" onsubmit="return confirm('Approve all {{ pending_count }} pending submissions?');">
+                {% csrf_token %}
+                <button type="submit" class="btn" style="background: #4caf50;">✔️ Approve All ({{ pending_count }})</button>
+            </form>
+            <form method="post" action="{% url 'reject_all_submissions' %}" onsubmit="return confirm('Reject all {{ pending_count }} pending submissions? Students will be able to resubmit.');">
+                {% csrf_token %}
+                <button type="submit" class="btn" style="background: #f44336;">✗ Reject All</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div style="background: white; border-radius: 15px; overflow: auto; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 30px;">
+            {% if pending_submissions %}
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--navy-blue); color: white;">
+                        <th style="padding: 10px; text-align: left;">Student</th>
+                        <th style="padding: 10px; text-align: left;">Course / Lesson</th>
+                        <th style="padding: 10px; text-align: left;">Task</th>
+                        <th style="padding: 10px; text-align: center;">Status</th>
+                        <th style="padding: 10px; text-align: center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for submission in pending_submissions %}
+                    <tr style="border-bottom: 1px solid #eee;" id="row-sub-{{ submission.id }}">
+                        <td style="padding: 10px;">
+                            <strong>{{ submission.student.get_full_name }}</strong>
+                            <br><small style="color: #888;">{{ submission.student.email }}</small>
+                        </td>
+                        <td style="padding: 10px;">
+                            {{ submission.task.lesson.playlist.course.title }}
+                            <br><small style="color: #888;">{{ submission.task.lesson.title }}</small>
+                        </td>
+                        <td style="padding: 10px;">{{ submission.task.prompt|truncatechars:50 }}</td>
+                        <td style="padding: 10px; text-align: center;">
+                            <span style="background: #fff8e1; color: #ef6c00; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">⏳ Pending</span>
+                        </td>
+                        <td style="padding: 10px; text-align: center;">
+                            <button type="button" class="btn" style="padding: 6px 14px; font-size: 13px;" onclick="document.getElementById('review-sub-{{ submission.id }}').style.display='block'; this.style.display='none';">
+                                🔎 Review
+                            </button>
+                            <div id="review-sub-{{ submission.id }}" style="display:none; margin-top: 10px; text-align: left; background: #f8f9fb; border-radius: 8px; padding: 10px;">
+                                <p style="font-size: 12px; color: #555; margin: 0 0 8px 0;"><strong>Answer:</strong> {{ submission.answer|truncatechars:80 }}</p>
+                                <form method="post" action="{% url 'approve_submission' submission.id %}" style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px;">
+                                    {% csrf_token %}
+                                    <input type="number" name="score" value="{{ submission.auto_score }}" min="0" max="{{ submission.task.max_score }}"
+                                           style="width: 55px; padding: 4px; border-radius: 6px; border: 1px solid var(--soft-gray); text-align: center;">
+                                    <span style="color: #888; font-size: 12px;">/ {{ submission.task.max_score }}</span>
+                                    <button type="submit" class="btn" style="padding: 6px 12px; font-size: 13px; background: #4caf50;">Approve</button>
+                                </form>
+                                <form method="post" action="{% url 'reject_submission' submission.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn" style="padding: 6px 12px; font-size: 13px; background: #f44336; width: 100%;">Reject</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color: #888; padding: 20px 0;">🎉 Nothing pending.</p>
+            {% endif %}
+        </div>
+
+        <!-- ASSIGNED (LINK-BASED) TASKS -->
+        <h2>🔗 Assigned Tasks (link submissions)</h2>
+        <div style="background: white; border-radius: 15px; overflow: auto; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            {% if pending_assigned %}
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--navy-blue); color: white;">
+                        <th style="padding: 10px; text-align: left;">Student</th>
+                        <th style="padding: 10px; text-align: left;">Task</th>
+                        <th style="padding: 10px; text-align: center;">Status</th>
+                        <th style="padding: 10px; text-align: center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for at in pending_assigned %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 10px;">
+                            <strong>{{ at.student.get_full_name }}</strong>
+                            <br><small style="color: #888;">{{ at.student.email }}</small>
+                        </td>
+                        <td style="padding: 10px;">{{ at.title }}</td>
+                        <td style="padding: 10px; text-align: center;">
+                            <span style="background: #fff8e1; color: #ef6c00; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">⏳ Pending</span>
+                        </td>
+                        <td style="padding: 10px; text-align: center;">
+                            <button type="button" class="btn" style="padding: 6px 14px; font-size: 13px;" onclick="document.getElementById('review-at-{{ at.id }}').style.display='block'; this.style.display='none';">
+                                🔎 Review
+                            </button>
+                            <div id="review-at-{{ at.id }}" style="display:none; margin-top: 10px; text-align: left; background: #f8f9fb; border-radius: 8px; padding: 10px;">
+                                <p style="font-size: 12px; margin: 0 0 8px 0;"><a href="{{ at.submission_link }}" target="_blank" rel="noopener">{{ at.submission_link|truncatechars:45 }}</a></p>
+                                <form method="post" action="{% url 'approve_assigned_task' at.id %}" style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px;">
+                                    {% csrf_token %}
+                                    <input type="number" name="score" min="1" max="100" placeholder="1-100"
+                                           style="width: 65px; padding: 4px; border-radius: 6px; border: 1px solid var(--soft-gray); text-align: center;">
+                                    <span style="color: #888; font-size: 12px;">/ 100</span>
+                                    <button type="submit" class="btn" style="padding: 6px 12px; font-size: 13px; background: #4caf50;">Approve</button>
+                                </form>
+                                <form method="post" action="{% url 'reject_assigned_task' at.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn" style="padding: 6px 12px; font-size: 13px; background: #f44336; width: 100%;">Reject</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color: #888; padding: 20px 0;">Nothing awaiting review.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

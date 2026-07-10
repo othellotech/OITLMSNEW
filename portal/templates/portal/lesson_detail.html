@@ -27,26 +27,65 @@
             
             <h3 style="color: var(--navy-blue); margin-top: 1.5rem;">Notes</h3>
             <p>{{ lesson.notes|linebreaks }}</p>
-            
-            <div style="display: flex; gap: 1rem; margin-top: 2rem; flex-wrap: wrap;">
+
+            {% if tasks_data %}
+            <div style="margin-top: 2rem;">
+                <h3 style="color: var(--navy-blue);">📝 Lesson Task{{ tasks_data|length|pluralize }}</h3>
+                {% for item in tasks_data %}
+                <div style="background: white; border: 1px solid var(--soft-gray); border-radius: 12px; padding: 18px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;">
+                    <div>
+                        <p style="font-weight: 600; color: var(--navy-blue); margin: 0 0 6px 0;">{{ item.task.prompt|truncatechars:80 }}</p>
+                        {% if item.submission %}
+                            {% if item.submission.status == 'approved' %}
+                                <span style="color: #2e7d32; font-weight: 600; font-size: 14px;">✓ Approved — {{ item.submission.final_score }} / {{ item.task.max_score }}</span>
+                            {% elif item.submission.status == 'rejected' %}
+                                <span style="color: #c62828; font-weight: 600; font-size: 14px;">✗ Rejected — needs resubmission</span>
+                            {% else %}
+                                <span style="color: #ef6c00; font-weight: 600; font-size: 14px;">⏳ Awaiting instructor review</span>
+                            {% endif %}
+                        {% else %}
+                            <span style="color: #888; font-size: 14px;">Not yet attempted</span>
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'task_detail' playlist.id lesson.id item.task.id %}" class="btn" style="white-space: nowrap;">
+                        {% if item.submission and item.submission.status != 'rejected' %}View{% else %}Attempt Task{% endif %}
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem; flex-wrap: wrap; align-items: center;">
                 {% if prev_lesson %}
                     <a href="{% url 'lesson_detail' playlist.id prev_lesson.id %}" class="btn btn-secondary">← Previous</a>
                 {% endif %}
-                
-                {% if not is_completed %}
-                    <form method="post">
-                        {% csrf_token %}
-                        <button type="submit" name="mark_complete" class="btn">✓ Mark as Completed</button>
-                    </form>
+
+                {% if not can_proceed %}
+                    {% if has_unsubmitted_lesson_tasks %}
+                        <span style="background: #fff8e1; color: #ef6c00; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+                            📝 Complete the task above first to continue
+                        </span>
+                    {% elif has_outstanding_assigned_tasks %}
+                        <a href="{% url 'student_tasks' %}" style="background: #fff8e1; color: #ef6c00; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; text-decoration: none;">
+                            📌 Submit your outstanding assigned task first →
+                        </a>
+                    {% endif %}
                 {% else %}
-                    <form method="post">
-                        {% csrf_token %}
-                        <button type="submit" name="undo_complete" class="btn" style="background: #ff9800;">↺ Undo</button>
-                    </form>
-                {% endif %}
-                
-                {% if next_lesson %}
-                    <a href="{% url 'lesson_detail' playlist.id next_lesson.id %}" class="btn btn-secondary">Next →</a>
+                    {% if not is_completed %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <button type="submit" name="mark_complete" class="btn">✓ Mark as Completed</button>
+                        </form>
+                    {% else %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <button type="submit" name="undo_complete" class="btn" style="background: #ff9800;">↺ Undo</button>
+                        </form>
+                    {% endif %}
+
+                    {% if next_lesson %}
+                        <a href="{% url 'lesson_detail' playlist.id next_lesson.id %}" class="btn btn-secondary">Next →</a>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>

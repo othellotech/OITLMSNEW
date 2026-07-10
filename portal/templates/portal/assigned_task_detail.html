@@ -1,0 +1,59 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-container">
+    <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+        <div class="navbar-brand">
+            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid var(--warm-yellow);">
+            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| Task</span></h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="{% url 'student_tasks' %}" style="color: var(--navy-blue); font-weight: 600; text-decoration: none;">← Back to My Tasks</a>
+        </div>
+    </nav>
+
+    <div class="main-content" style="padding-top: 90px;">
+        <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <h1 style="color: var(--navy-blue);">{{ assigned_task.title }}</h1>
+            <p style="color: #888;">{{ assigned_task.course.title }} • assigned by {{ assigned_task.instructor.get_full_name }}</p>
+
+            <h3 style="color: var(--navy-blue); margin-top: 24px;">Instructions</h3>
+            <p style="white-space: pre-line;">{{ assigned_task.instructions }}</p>
+
+            {% if assigned_task.resource_link %}
+            <p><a href="{{ assigned_task.resource_link }}" target="_blank" rel="noopener" class="btn" style="display: inline-block; margin-top: 10px;">📄 Open Reference Material</a></p>
+            {% endif %}
+
+            {% if assigned_task.status == 'rejected' and assigned_task.instructor_note %}
+            <div style="background: #ffebee; border: 1px solid #f44336; border-radius: 10px; padding: 14px; margin-top: 20px;">
+                <p style="color: #c62828; font-weight: 700; margin: 0;">✗ Rejected — please review and resubmit</p>
+                <p style="margin: 6px 0 0 0; color: #555;">{{ assigned_task.instructor_note }}</p>
+            </div>
+            {% elif assigned_task.status == 'rejected' %}
+            <div style="background: #ffebee; border: 1px solid #f44336; border-radius: 10px; padding: 14px; margin-top: 20px;">
+                <p style="color: #c62828; font-weight: 700; margin: 0;">✗ Rejected — please review and resubmit</p>
+            </div>
+            {% endif %}
+
+            <h3 style="color: var(--navy-blue); margin-top: 24px;">Your Submission</h3>
+            {% if can_edit %}
+            <form method="post">
+                {% csrf_token %}
+                <input type="url" name="submission_link" placeholder="https://drive.google.com/..." value="{{ assigned_task.submission_link }}" required
+                       style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--soft-gray); margin: 10px 0;">
+                <button type="submit" class="btn">{% if assigned_task.submission_link %}Update Submission{% else %}Submit{% endif %}</button>
+                {% if assigned_task.status == 'submitted' %}
+                    <p style="color: #888; font-size: 13px; margin-top: 8px;">You can still update this link until your instructor reviews it.</p>
+                {% endif %}
+            </form>
+            {% else %}
+            <div style="background: #e8f5e9; border: 1px solid #4caf50; border-radius: 10px; padding: 18px;">
+                <p style="color: #2e7d32; font-weight: 700; margin: 0;">✓ Approved{% if assigned_task.score %} — Score: {{ assigned_task.score }}/100{% endif %}</p>
+                <p style="margin: 6px 0 0 0;"><a href="{{ assigned_task.submission_link }}" target="_blank" rel="noopener">{{ assigned_task.submission_link }}</a></p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

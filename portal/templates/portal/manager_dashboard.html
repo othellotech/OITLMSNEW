@@ -1,0 +1,103 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-container">
+    <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+        <div class="navbar-brand">
+            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid var(--warm-yellow);">
+            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| Manager Dashboard</span></h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="{% url 'manager_survey' %}" style="color: var(--navy-blue); font-weight: 600; text-decoration: none; padding: 0.5rem 0.8rem; border-radius: 8px; background: var(--soft-gray);">
+                ⭐ Survey Data
+            </a>
+            <span style="color: var(--navy-blue); font-weight: 500;">👋 {{ user.first_name }} {{ user.last_name }}</span>
+            <a href="{% url 'logout' %}" class="logout-btn" style="padding: 0.5rem 1.2rem;" onclick="return confirm('Are you sure you want to logout?');">🚪 Logout</a>
+        </div>
+    </nav>
+
+    <div class="main-content" style="padding-top: 90px;">
+        <div class="welcome-card">
+            <h1>Welcome, {{ user.first_name }}! 🧭</h1>
+            <h2>Overseeing {{ total_students }} students across {{ all_courses.count }} course(s)</h2>
+            <p>Student progress, unlocked playlists, and survey feedback across every course.</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 30px;">
+            <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 16px;">
+                <svg width="90" height="90" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="#eee" stroke-width="12"/>
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="{{ gauge_color }}" stroke-width="12"
+                        stroke-dasharray="{{ gauge_circumference }}" stroke-dashoffset="{{ gauge_offset }}"
+                        stroke-linecap="round" transform="rotate(-90 60 60)"/>
+                    <text x="60" y="66" text-anchor="middle" font-size="24" font-weight="700" fill="var(--navy-blue)">{{ overall_rating|default:"—" }}</text>
+                </svg>
+                <div>
+                    <div style="font-size: 13px; color: #888;">Platform-wide Rating</div>
+                    <div style="font-size: 12px; color: #aaa;">out of 10</div>
+                </div>
+            </div>
+            <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div style="font-size: 13px; color: #888;">Total Students</div>
+                <div style="font-size: 32px; font-weight: 700; color: var(--navy-blue);">{{ total_students }}</div>
+            </div>
+            <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div style="font-size: 13px; color: #888;">Total Courses</div>
+                <div style="font-size: 32px; font-weight: 700; color: var(--navy-blue);">{{ all_courses.count }}</div>
+            </div>
+            <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div style="font-size: 13px; color: #888;">Total Survey Responses</div>
+                <div style="font-size: 32px; font-weight: 700; color: var(--navy-blue);">{{ total_ratings }}</div>
+                <a href="{% url 'manager_survey' %}" style="font-size: 12px; color: var(--navy-blue); text-decoration: underline;">See details →</a>
+            </div>
+        </div>
+
+        <h2>👨‍🎓 Student Progress</h2>
+        <div style="background: white; border-radius: 15px; overflow: auto; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            {% if students %}
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--navy-blue); color: white;">
+                        <th style="padding: 12px; text-align: left;">Student</th>
+                        <th style="padding: 12px; text-align: left;">Email</th>
+                        <th style="padding: 12px; text-align: left;">Courses</th>
+                        <th style="padding: 12px; text-align: center;">Progress</th>
+                        <th style="padding: 12px; text-align: center;">Unlocked Playlists</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in students %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 12px;"><strong>{{ item.student.get_full_name }}</strong></td>
+                        <td style="padding: 12px;">{{ item.student.email }}</td>
+                        <td style="padding: 12px;">
+                            {% for course in item.courses %}
+                                <span style="background: #e3f2fd; padding: 3px 8px; border-radius: 5px; margin: 2px; display: inline-block; font-size: 12px;">{{ course.title }}</span>
+                            {% endfor %}
+                        </td>
+                        <td style="padding: 12px; text-align: center;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="flex: 1; background: #e0e0e0; border-radius: 10px; overflow: hidden;">
+                                    <div style="background: #4caf50; width: {{ item.progress }}%; height: 8px;"></div>
+                                </div>
+                                <span style="font-weight: bold; min-width: 45px;">{{ item.progress }}%</span>
+                            </div>
+                            <small style="color: #888;">{{ item.completed }}/{{ item.total }} lessons</small>
+                        </td>
+                        <td style="padding: 12px; text-align: center;">
+                            <span style="font-weight: bold; color: var(--navy-blue);">{{ item.unlocked_playlists }}/{{ item.total_playlists }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="padding: 40px; text-align: center; color: #888;">
+                <p>No students enrolled yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

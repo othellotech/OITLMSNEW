@@ -6,24 +6,50 @@
     <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
         <div class="navbar-brand">
             <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid var(--warm-yellow);">
-            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| Instructor Dashboard</span></h2>
+            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| My Courses</span></h2>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
+            {% include 'portal/_instructor_bell.html' %}
             <span style="color: var(--navy-blue); font-weight: 500;">👋 {{ user.first_name }} {{ user.last_name }}</span>
             <a href="{% url 'logout' %}" class="logout-btn" style="padding: 0.5rem 1.2rem;" onclick="return confirm('Are you sure you want to logout?');">🚪 Logout</a>
         </div>
     </nav>
 
     <div class="main-content" style="padding-top: 90px;">
-        <div class="welcome-card">
-            <h1>Welcome, {{ user.first_name }}! 👨‍🏫</h1>
-            <h2>You are teaching {{ total_students }} students across {{ instructor_courses.count }} course(s)</h2>
-            <p>Monitor your students' learning progress</p>
+        {% include 'portal/_instructor_tabs.html' with active='courses' %}
+
+        <div class="welcome-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+            <div>
+                <h1>Welcome, {{ user.first_name }}! 👨‍🏫</h1>
+                <h2>You are teaching {{ total_students }} students across {{ instructor_courses.count }} course(s)</h2>
+                <p>Monitor your students' learning progress</p>
+            </div>
+            <div style="text-align: center;">
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="12"/>
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="{{ gauge_color }}" stroke-width="12"
+                        stroke-dasharray="{{ gauge_circumference }}" stroke-dashoffset="{{ gauge_offset }}"
+                        stroke-linecap="round" transform="rotate(-90 60 60)"/>
+                    <text x="60" y="57" text-anchor="middle" font-size="22" font-weight="700" fill="white">{{ overall_rating|default:"—" }}</text>
+                    <text x="60" y="75" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.8)">Your Rating /10</text>
+                </svg>
+            </div>
         </div>
 
-        <!-- My Courses -->
-        <h2>📚 My Courses</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
+        {% if pending_approvals_count or pending_assigned_tasks_count %}
+        <div style="background: #fff8e1; border: 1px solid var(--warm-yellow); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <span style="color: var(--navy-blue); font-weight: 600;">
+                ⏳ {{ pending_approvals_count|add:pending_assigned_tasks_count }} item(s) waiting for your review.
+            </span>
+            <a href="{% url 'instructor_approvals' %}" class="btn" style="padding: 8px 18px;">Review Now</a>
+        </div>
+        {% endif %}
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h2 style="margin: 0;">📚 My Courses</h2>
+            <a href="{% url 'instructor_assign_task' %}" class="btn" style="padding: 8px 18px;">➕ Assign Task to Student</a>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
             {% for course in instructor_courses %}
             <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                 <h3 style="color: var(--navy-blue);">{{ course.title }}</h3>
@@ -32,77 +58,11 @@
                 <p><strong>📖 Playlists:</strong> {{ course.playlists.count }}</p>
             </div>
             {% empty %}
-            <div style="background: white; border-radius: 15px; padding: 30px; text-align: center; color: #888; grid-column: 1 / -1;">
+            <div style="background: white; border-radius: 15px; padding: 30px; text-align: center; color: #888;">
                 <p>You are not assigned to any courses yet.</p>
                 <p style="font-size: 14px;">Please contact the admin to assign you to courses.</p>
             </div>
             {% endfor %}
-        </div>
-
-        <!-- Student Progress -->
-        <h2>👨‍🎓 Student Progress</h2>
-        <div style="background: white; border-radius: 15px; overflow: auto; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            {% if students %}
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="background: var(--navy-blue); color: white;">
-                        <th style="padding: 12px; text-align: left;">Student</th>
-                        <th style="padding: 12px; text-align: left;">Email</th>
-                        <th style="padding: 12px; text-align: left;">Courses</th>
-                        <th style="padding: 12px; text-align: center;">Progress</th>
-                        <th style="padding: 12px; text-align: center;">Unlocked Playlists</th>
-                        <th style="padding: 12px; text-align: center;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in students %}
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 12px;">
-                            <strong>{{ item.student.get_full_name }}</strong>
-                            <br><small style="color: #888;">{{ item.student.email }}</small>
-                        </td>
-                        <td style="padding: 12px;">{{ item.student.email }}</td>
-                        <td style="padding: 12px;">
-                            {% for course in item.courses %}
-                                <span style="background: #e3f2fd; padding: 3px 8px; border-radius: 5px; margin: 2px; display: inline-block; font-size: 12px;">
-                                    {{ course.title }}
-                                </span>
-                            {% endfor %}
-                        </td>
-                        <td style="padding: 12px; text-align: center;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <div style="flex: 1; background: #e0e0e0; border-radius: 10px; overflow: hidden;">
-                                    <div style="background: #4caf50; width: {{ item.progress }}%; height: 8px;"></div>
-                                </div>
-                                <span style="font-weight: bold; min-width: 45px;">{{ item.progress }}%</span>
-                            </div>
-                            <small style="color: #888;">{{ item.completed }}/{{ item.total }} lessons</small>
-                        </td>
-                        <td style="padding: 12px; text-align: center;">
-                            <span style="font-weight: bold; color: var(--navy-blue);">{{ item.unlocked_playlists }}/{{ item.total_playlists }}</span>
-                            <br><small style="color: #888;">playlists unlocked</small>
-                            {% if item.playlist_breakdown|length > 1 %}
-                                <div style="margin-top: 6px; text-align: left; display: inline-block;">
-                                    {% for b in item.playlist_breakdown %}
-                                        <div style="font-size: 11px; color: #666; white-space: nowrap;">{{ b.course.title }}: <strong>{{ b.unlocked }}/{{ b.total }}</strong></div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </td>
-                        <td style="padding: 12px; text-align: center;">
-                            <a href="{% url 'admin_student_detail' item.student.id %}" style="background: var(--warm-yellow); padding: 5px 10px; border-radius: 5px; text-decoration: none; color: var(--navy-blue); font-size: 12px;">
-                                View Details
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <div style="padding: 40px; text-align: center; color: #888;">
-                <p>No students enrolled in your courses yet.</p>
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>

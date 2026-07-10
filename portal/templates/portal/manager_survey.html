@@ -1,0 +1,77 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-container">
+    <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+        <div class="navbar-brand">
+            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid var(--warm-yellow);">
+            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| Survey Data</span></h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="{% url 'manager_dashboard' %}" style="color: var(--navy-blue); font-weight: 600; text-decoration: none;">← Back to Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="main-content" style="padding-top: 90px;">
+        <div class="welcome-card">
+            <h1>⭐ Survey Data — All Courses</h1>
+            <p>Every student rating across every course and instructor, plus an overall rollup per question.</p>
+        </div>
+
+        <h2>📊 Aggregate Ratings</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-bottom: 30px;">
+            {% for question_text, data in aggregates.items %}
+            <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div style="font-size: 13px; color: #888; margin-bottom: 6px;">{{ question_text }}</div>
+                <div style="font-size: 26px; font-weight: 700; color: var(--navy-blue);">{{ data.average|default:"—" }} / 10</div>
+                <div style="font-size: 12px; color: #888;">{{ data.total }} response{{ data.total|pluralize }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <h2>📋 Individual Responses</h2>
+        <div style="background: white; border-radius: 15px; overflow: auto; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            {% if responses %}
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--navy-blue); color: white;">
+                        <th style="padding: 12px; text-align: left;">Student</th>
+                        <th style="padding: 12px; text-align: left;">Email</th>
+                        <th style="padding: 12px; text-align: left;">Course</th>
+                        <th style="padding: 12px; text-align: left;">Instructor</th>
+                        <th style="padding: 12px; text-align: left;">Question</th>
+                        <th style="padding: 12px; text-align: center;">Rating</th>
+                        <th style="padding: 12px; text-align: center;">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for response in responses %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 12px;">{{ response.student.get_full_name }}</td>
+                        <td style="padding: 12px;">{{ response.student.email }}</td>
+                        <td style="padding: 12px;">{{ response.course.title }}</td>
+                        <td style="padding: 12px;">{{ response.instructor.get_full_name|default:"—" }}</td>
+                        <td style="padding: 12px;">{{ response.question.text }}</td>
+                        <td style="padding: 12px; text-align: center;">
+                            <span style="display:inline-block; padding: 4px 14px; border-radius: 20px; font-weight: 700; color: white;
+                                {% if response.color == 'red' %}background:#f44336;
+                                {% elif response.color == 'yellow' %}background:#f9a825;
+                                {% else %}background:#4caf50;{% endif %}">
+                                {{ response.rating }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px; text-align: center; font-size: 12px; color: #888;">{{ response.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="padding: 40px; text-align: center; color: #888;">
+                <p>No survey responses yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

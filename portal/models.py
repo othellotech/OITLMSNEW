@@ -9,6 +9,7 @@ class User(AbstractUser):
     USER_TYPES = (
         ('instructor', 'Instructor'),
         ('student', 'Student'),
+        ('manager', 'Manager'),
     )
 
     first_name = models.CharField(max_length=50)
@@ -28,6 +29,10 @@ class User(AbstractUser):
     @property
     def is_student(self):
         return self.user_type == 'student'
+
+    @property
+    def is_manager(self):
+        return self.user_type == 'manager'
 
 
 class Course(models.Model):
@@ -255,7 +260,15 @@ class Notification(models.Model):
 
 
 class UserNotification(models.Model):
-    """Track which users have seen/dismissed which notifications"""
+    """
+    This row is what makes a notification visible to a specific student.
+    Creating a Notification in Django Admin has NO effect by itself -- it
+    doesn't email anyone and doesn't appear on any dashboard. Only once an
+    admin/instructor creates a UserNotification row here (assigning that
+    notification to a specific student) does the student get emailed and see
+    it appear on their dashboard. This same row also tracks read/dismissed
+    state as the student interacts with it afterward.
+    """
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     notification = models.ForeignKey(Notification, on_delete=models.CASCADE)
     is_read = models.BooleanField(default=False)
@@ -265,3 +278,350 @@ class UserNotification(models.Model):
 
     class Meta:
         unique_together = ('user', 'notification')
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super().save(*args, **kwargs)
+        if is_new:
+            self._email_student()
+
+    def _email_student(self):
+        """Best-effort email to this one student, the moment the notification
+        is assigned to them. Never raises -- a mail hiccup shouldn't block
+        the admin action that assigns it."""
+        if not self.user.email:
+            return
+        from django.core.mail import send_mail
+        from django.conf import settings as dj_settings
+        try:
+            send_mail(
+                subject=f'[Othello Institute of Technology] {self.notification.title}',
+                message=self.notification.message,
+                from_email=dj_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[self.user.email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+
+
+# ==============================================
+# TASKS & SUBMISSIONS (auto-graded, instructor-approval-gated)
+# ==============================================
+
+class Task(models.Model):
+    """A small auto-gradable task attached to a lesson."""
+    TASK_TYPES = (
+        ('text', 'Text (exact match)'),
+        ('mcq', 'Multiple Choice'),
+        ('true_false', 'True / False'),
+    )
+
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='tasks')
+    task_type = models.CharField(max_length=20, choices=TASK_TYPES, default='text')
+    prompt = models.TextField(help_text="The question/instruction shown to the student.")
+    correct_answer = models.CharField(
+        max_length=500, blank=True,
+        help_text="Used for 'Text' type (exact match, case-insensitive) and 'True/False' "
+                   "type (enter True or False). Not used for Multiple Choice -- add options below instead."
+    )
+    max_score = models.PositiveIntegerField(default=10)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"Task for {self.lesson.title}"
+
+    def grade(self, answer):
+        """Auto-grader dispatched by task_type. Full marks on a correct answer, else 0."""
+        if answer is None:
+            return 0
+        answer = str(answer).strip()
+
+        if self.task_type == 'mcq':
+            try:
+                option = self.options.get(id=int(answer))
+            except (TaskOption.DoesNotExist, ValueError, TypeError):
+                return 0
+            return self.max_score if option.is_correct else 0
+
+        # 'text' and 'true_false' both use a simple case-insensitive exact match
+        return self.max_score if answer.lower() == self.correct_answer.strip().lower() else 0
+
+
+class TaskOption(models.Model):
+    """One selectable option for a Multiple Choice Task."""
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='options')
+    text = models.CharField(max_length=300)
+    is_correct = models.BooleanField(default=False)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return self.text
+
+
+class Submission(models.Model):
+    """
+    A student's answer to a Task. Score is computed immediately (auto_score),
+    but is only ever shown to the student once an instructor approves it.
+    Instructors can override the score, and can approve or reject -- a
+    rejected submission stays visible to the student as outstanding, and
+    an approved one can still be revisited/edited later if needed.
+    """
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
+
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='submissions')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='submissions')
+    answer = models.CharField(max_length=500)
+    auto_score = models.PositiveIntegerField(default=0)
+    instructor_score = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Leave blank to use the auto-computed score. Set this to override it before approving."
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    instructor_note = models.TextField(blank=True, help_text="Optional note shown to the student, e.g. why it was rejected.")
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='reviewed_submissions'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('student', 'task')
+        ordering = ['-submitted_at']
+
+    def __str__(self):
+        return f"{self.student} -> {self.task} ({self.status})"
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.auto_score = self.task.grade(self.answer)
+        super().save(*args, **kwargs)
+
+    @property
+    def is_approved(self):
+        return self.status == 'approved'
+
+    @property
+    def final_score(self):
+        return self.instructor_score if self.instructor_score is not None else self.auto_score
+
+    def approve(self, by_user, score=None):
+        if score is not None:
+            self.instructor_score = score
+        self.status = 'approved'
+        self.approved_by = by_user
+        self.approved_at = timezone.now()
+        self.save()
+
+    def reject(self, by_user, note=''):
+        self.status = 'rejected'
+        self.approved_by = by_user
+        self.approved_at = timezone.now()
+        if note:
+            self.instructor_note = note
+        self.save()
+
+
+class AssignedTask(models.Model):
+    """
+    A custom, link-based task an instructor assigns directly to one student
+    (separate from the auto-graded lesson Tasks above). The student reads
+    the instructions/resource link and submits their own link back; the
+    instructor reviews and approves or rejects it. Optionally gated behind
+    full completion of a specific playlist.
+    """
+    STATUS_CHOICES = (
+        ('not_submitted', 'Not Submitted'),
+        ('submitted', 'Submitted - Awaiting Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected - Needs Resubmission'),
+    )
+
+    instructor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='assigned_tasks_given')
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='assigned_tasks')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='assigned_tasks')
+    title = models.CharField(max_length=200)
+    instructions = models.TextField()
+    resource_link = models.URLField(
+        blank=True,
+        help_text="Optional reference link for the student to read first, e.g. a Google Drive PDF."
+    )
+    required_playlist = models.ForeignKey(
+        Playlist, on_delete=models.SET_NULL, null=True, blank=True, related_name='gated_assigned_tasks',
+        help_text="If set, this task only appears on the student's dashboard once the student has "
+                   "completed at least 'Required lesson count' lessons in this playlist. Leave blank "
+                   "for no prerequisite."
+    )
+    required_lesson_count = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="How many lessons in the required playlist must be completed before this task "
+                   "becomes visible. Only used if a required playlist is set above."
+    )
+    submission_link = models.URLField(blank=True, help_text="The student's submitted link.")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_submitted')
+    score = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Score out of 100, set by the instructor when approving. Optional."
+    )
+    instructor_note = models.TextField(blank=True, help_text="Optional note shown to the student, e.g. why it was rejected.")
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='reviewed_assigned_tasks'
+    )
+
+    class Meta:
+        ordering = ['-assigned_at']
+
+    def __str__(self):
+        return f"{self.title} -> {self.student}"
+
+    @property
+    def is_unlocked(self):
+        if not self.required_playlist_id:
+            return True
+        completed = CompletedLesson.objects.filter(
+            user=self.student, lesson__playlist=self.required_playlist
+        ).count()
+        # Falls back to "every lesson in the playlist" only if this task was
+        # created before required_lesson_count existed (keeps old data working).
+        required = self.required_lesson_count
+        if required is None:
+            required = self.required_playlist.lessons.count()
+        return completed >= required
+
+    def submit(self, link):
+        self.submission_link = link
+        self.status = 'submitted'
+        self.submitted_at = timezone.now()
+        self.save()
+
+    def approve(self, by_user, score=None):
+        self.status = 'approved'
+        self.reviewed_by = by_user
+        self.reviewed_at = timezone.now()
+        if score is not None:
+            self.score = score
+        self.save()
+
+    def reject(self, by_user, note=''):
+        self.status = 'rejected'
+        self.reviewed_by = by_user
+        self.reviewed_at = timezone.now()
+        if note:
+            self.instructor_note = note
+        self.save()
+
+
+# ==============================================
+# STUDENT PULSE SURVEY (monthly rating, admin-configurable frequency)
+# ==============================================
+
+class SurveyQuestion(models.Model):
+    """One of the fixed questions shown in the periodic student survey."""
+    text = models.CharField(max_length=300)
+    is_instructor_related = models.BooleanField(
+        default=False,
+        help_text="Tick for the question that rates the instructor's performance. "
+                   "Only this question's ratings are shown on instructor dashboards."
+    )
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return self.text
+
+
+class CourseSurveyConfig(models.Model):
+    """Per-course control over how often the pulse survey is shown to its students."""
+    course = models.OneToOneField(Course, on_delete=models.CASCADE, related_name='survey_config')
+    interval_days = models.PositiveIntegerField(
+        default=30,
+        help_text="Days between one survey prompt and the next (e.g. 30 for monthly)."
+    )
+    max_occurrences = models.PositiveIntegerField(
+        default=4,
+        help_text="Total number of times the survey should ever be shown to a student on this course "
+                   "(e.g. 2 for a short course, 4 or 5 for a longer one)."
+    )
+
+    def __str__(self):
+        return f"{self.course.title}: every {self.interval_days}d, x{self.max_occurrences}"
+
+
+class SurveyPrompt(models.Model):
+    """
+    One row per scheduled survey occurrence for a given student on a given course.
+    Created lazily (get_or_create) as each occurrence becomes due. While
+    completed_at is null and due_at <= now, this prompt BLOCKS the student's
+    dashboard until answered -- it persists across logout/login.
+    """
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='survey_prompts')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='survey_prompts')
+    occurrence_number = models.PositiveIntegerField()
+    due_at = models.DateTimeField()
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('student', 'course', 'occurrence_number')
+        ordering = ['due_at']
+
+    def __str__(self):
+        return f"{self.student} / {self.course} #{self.occurrence_number}"
+
+    @property
+    def is_pending(self):
+        return self.completed_at is None and self.due_at <= timezone.now()
+
+
+class SurveyResponse(models.Model):
+    """A single 1-10 answer to one question, tied to the course/instructor it's about."""
+    prompt = models.ForeignKey(SurveyPrompt, on_delete=models.CASCADE, related_name='responses')
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='survey_responses')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='survey_responses')
+    instructor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='received_ratings',
+        null=True, blank=True,
+        help_text="Derived automatically from the course's instructor at save time."
+    )
+    question = models.ForeignKey(SurveyQuestion, on_delete=models.CASCADE, related_name='responses')
+    rating = models.PositiveIntegerField(help_text="1-10")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('prompt', 'question')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.student} rated '{self.question}' = {self.rating}"
+
+    @property
+    def color(self):
+        if self.rating <= 3:
+            return 'red'
+        elif self.rating <= 6:
+            return 'yellow'
+        return 'green'
+
+    def save(self, *args, **kwargs):
+        if self.instructor_id is None:
+            first_instructor = self.course.instructors.first()
+            if first_instructor:
+                self.instructor_id = first_instructor.id
+        super().save(*args, **kwargs)

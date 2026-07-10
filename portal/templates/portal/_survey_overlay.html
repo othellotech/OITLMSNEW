@@ -1,0 +1,66 @@
+{% comment %}
+Blocking pulse-survey overlay. Included by student_dashboard.html when
+pending_survey_prompt is set. Covers the entire dashboard, cannot be
+dismissed, has no close button, and is not removable via logout: since
+dashboard_view recomputes pending_survey_prompt on every load (including
+right after login), the overlay reappears until every question is rated.
+
+It also doesn't appear instantly on login: dashboard_view withholds
+pending_survey_prompt until SURVEY_DISPLAY_DELAY_SECONDS have passed in the
+session, and instead passes survey_seconds_remaining so this page can
+auto-reload itself once the wait is over -- no manual refresh needed.
+{% endcomment %}
+{% if survey_seconds_remaining and survey_seconds_remaining > 0 %}
+<script>
+    setTimeout(function() { window.location.reload(); }, {{ survey_seconds_remaining }} * 1000);
+</script>
+{% endif %}
+{% if pending_survey_prompt %}
+<div id="surveyOverlay" style="position: fixed; inset: 0; z-index: 5000; background: rgba(11,31,91,0.92); display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto;">
+    <div style="background: white; border-radius: 18px; max-width: 520px; width: 100%; padding: 32px; box-shadow: var(--shadow-hover); margin: auto;">
+        <h2 style="color: var(--navy-blue); margin-top: 0;">📋 Quick check-in</h2>
+        <p style="color: #555; font-size: 14px; margin-bottom: 20px;">
+            Please rate the following from 1 (lowest) to 10 (highest) for
+            <strong>{{ pending_survey_prompt.course.title }}</strong>. This only takes a moment,
+            and you won't be able to continue to your dashboard until it's submitted.
+        </p>
+        <form method="post" action="{% url 'submit_survey' pending_survey_prompt.id %}">
+            {% csrf_token %}
+            {% for question in pending_survey_questions %}
+            <div class="survey-question-block" style="margin-bottom: 24px;">
+                <label style="display: block; font-weight: 600; color: var(--navy-blue); margin-bottom: 10px;">
+                    {{ forloop.counter }}. {{ question.text }}
+                </label>
+                <div class="rating-scale" data-question-id="{{ question.id }}" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    {% for score_num in survey_scale %}
+                    <label class="rating-option" style="cursor: pointer;">
+                        <input type="radio" name="question_{{ question.id }}" value="{{ score_num }}" required style="display:none;" onchange="updateRatingStyle(this)">
+                        <span class="rating-box" style="display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:8px; border:2px solid #ddd; font-size:13px; font-weight:600; color:#555;">{{ score_num }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            <button type="submit" style="width: 100%; padding: 12px; background: var(--navy-blue); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px;">
+                Submit &amp; Continue
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+    body.survey-locked { overflow: hidden; }
+    .rating-option input:checked + .rating-box {
+        border-color: var(--warm-yellow);
+        background: var(--warm-yellow);
+        color: var(--navy-blue);
+    }
+</style>
+<script>
+    document.body.classList.add('survey-locked');
+
+    function updateRatingStyle(input) {
+        // purely visual; selection state is driven by the checked radio itself
+    }
+</script>
+{% endif %}

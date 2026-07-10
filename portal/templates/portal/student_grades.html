@@ -1,0 +1,115 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-container">
+    <nav class="navbar" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; padding: 0.8rem 2rem; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+        <div class="navbar-brand">
+            <img src="{% static 'images/logo.jpeg' %}" alt="OIT Logo" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid var(--warm-yellow);">
+            <h2 style="font-size: 1.2rem; margin: 0;">Othello Institute of Technology <span style="font-size: 0.85rem;">| Grades</span></h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="{% url 'dashboard' %}" style="color: var(--navy-blue); font-weight: 600; text-decoration: none;">← Back to Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="main-content" style="padding-top: 90px;">
+        <div class="welcome-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+            <div>
+                <h1>🏆 Your Grades</h1>
+                <p>Scores from your completed tasks, once approved by your instructor.</p>
+            </div>
+            <div style="text-align: center;">
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="12"/>
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="var(--warm-yellow)" stroke-width="12"
+                        stroke-dasharray="{{ gauge_circumference }}" stroke-dashoffset="{{ gauge_offset }}"
+                        stroke-linecap="round" transform="rotate(-90 60 60)"/>
+                    <text x="60" y="57" text-anchor="middle" font-size="22" font-weight="700" fill="white">{{ cgpa_percent|default:"—" }}{% if cgpa_percent %}%{% endif %}</text>
+                    <text x="60" y="75" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.8)">CGPA</text>
+                </svg>
+            </div>
+        </div>
+
+        {% if pending_count > 0 %}
+        <div style="background: #fff8e1; border: 1px solid var(--warm-yellow); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; color: var(--navy-blue);">
+            ⏳ You have <strong>{{ pending_count }}</strong> submission(s) awaiting instructor approval. Scores will appear here once approved.
+        </div>
+        {% endif %}
+        {% if rejected_count > 0 %}
+        <div style="background: #ffebee; border: 1px solid #f44336; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; color: #c62828; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <span>✗ You have <strong>{{ rejected_count }}</strong> submission(s) that were rejected and need resubmission.</span>
+            {% if first_rejected %}
+            <a href="{% url 'task_detail' first_rejected.task.lesson.playlist.id first_rejected.task.lesson.id first_rejected.task.id %}" class="btn" style="background: #f44336; padding: 8px 16px;">Resolve Now</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div style="background: white; border-radius: 15px; overflow: auto; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px;">
+            <h3 style="color: var(--navy-blue); font-size: 15px;">📋 Lesson Task Grades</h3>
+            {% if submissions %}
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--navy-blue); color: white;">
+                        <th style="padding: 12px; text-align: left;">Course</th>
+                        <th style="padding: 12px; text-align: left;">Lesson</th>
+                        <th style="padding: 12px; text-align: left;">Task</th>
+                        <th style="padding: 12px; text-align: center;">Score</th>
+                        <th style="padding: 12px; text-align: center;">Approved</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for submission in submissions %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 12px;">{{ submission.task.lesson.playlist.course.title }}</td>
+                        <td style="padding: 12px;">{{ submission.task.lesson.title }}</td>
+                        <td style="padding: 12px;">{{ submission.task.prompt|truncatechars:60 }}</td>
+                        <td style="padding: 12px; text-align: center; font-weight: bold; color: var(--navy-blue);">
+                            {{ submission.final_score }} / {{ submission.task.max_score }}
+                        </td>
+                        <td style="padding: 12px; text-align: center; color: #888; font-size: 13px;">
+                            {{ submission.approved_at|date:"M d, Y" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color: #888; padding: 20px 0;">No approved lesson task grades yet.</p>
+            {% endif %}
+        </div>
+
+        <div style="background: white; border-radius: 15px; overflow: auto; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <h3 style="color: var(--navy-blue); font-size: 15px;">🔗 Assigned Task Grades</h3>
+            {% if scored_assigned_tasks %}
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--navy-blue); color: white;">
+                        <th style="padding: 12px; text-align: left;">Course</th>
+                        <th style="padding: 12px; text-align: left;">Task</th>
+                        <th style="padding: 12px; text-align: center;">Score</th>
+                        <th style="padding: 12px; text-align: center;">Approved</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for at in scored_assigned_tasks %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 12px;">{{ at.course.title }}</td>
+                        <td style="padding: 12px;">{{ at.title }}</td>
+                        <td style="padding: 12px; text-align: center; font-weight: bold; color: var(--navy-blue);">
+                            {{ at.score }} / 100
+                        </td>
+                        <td style="padding: 12px; text-align: center; color: #888; font-size: 13px;">
+                            {{ at.reviewed_at|date:"M d, Y" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color: #888; padding: 20px 0;">No scored assigned tasks yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

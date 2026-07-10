@@ -15,10 +15,32 @@ urlpatterns = [
     path('unlock/<int:playlist_id>/', views.unlock_playlist_view, name='unlock_playlist'),
     path('playlist/<int:playlist_id>/', views.playlist_lessons_view, name='playlist_lessons'),
     path('playlist/<int:playlist_id>/lesson/<int:lesson_id>/', views.lesson_detail_view, name='lesson_detail'),
-    
+    path('playlist/<int:playlist_id>/lesson/<int:lesson_id>/task/<int:task_id>/', views.task_detail_view, name='task_detail'),
+
     # Instructor dashboard
     path('instructor-dashboard/', views.instructor_dashboard, name='instructor_dashboard'),
+    path('instructor/students/', views.instructor_students_view, name='instructor_students'),
     path('admin-student/<int:student_id>/', views.admin_student_detail, name='admin_student_detail'),
+    path('instructor/approvals/', views.instructor_approvals_view, name='instructor_approvals'),
+    path('instructor/approve/<int:submission_id>/', views.approve_submission_view, name='approve_submission'),
+    path('instructor/reject/<int:submission_id>/', views.reject_submission_view, name='reject_submission'),
+    path('instructor/approve-all/', views.approve_all_submissions_view, name='approve_all_submissions'),
+    path('instructor/reject-all/', views.reject_all_submissions_view, name='reject_all_submissions'),
+    path('instructor/assign-task/', views.instructor_assign_task_view, name='instructor_assign_task'),
+    path('instructor/assigned-task/<int:assigned_task_id>/approve/', views.approve_assigned_task_view, name='approve_assigned_task'),
+    path('instructor/assigned-task/<int:assigned_task_id>/reject/', views.reject_assigned_task_view, name='reject_assigned_task'),
+    path('instructor/outline/', views.instructor_course_outline_view, name='instructor_course_outline'),
+    path('instructor/survey/', views.instructor_survey_view, name='instructor_survey'),
+
+    # Manager dashboard
+    path('manager-dashboard/', views.manager_dashboard_view, name='manager_dashboard'),
+    path('manager/survey/', views.manager_survey_view, name='manager_survey'),
+
+    # Student grades, survey & assigned tasks
+    path('grades/', views.student_grades_view, name='student_grades'),
+    path('survey/submit/<int:prompt_id>/', views.submit_survey_view, name='submit_survey'),
+    path('my-tasks/', views.student_tasks_view, name='student_tasks'),
+    path('my-tasks/<int:assigned_task_id>/', views.assigned_task_detail_view, name='assigned_task_detail'),
     
     # AJAX endpoints
     path('check-email/', views.check_email_exists, name='check_email'),

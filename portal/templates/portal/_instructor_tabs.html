@@ -1,0 +1,37 @@
+{% comment %}
+Shared tab navigation across all instructor pages.
+Usage: {% include 'portal/_instructor_tabs.html' with active='courses' %}
+active can be: courses | my_students | tasks | survey | outline
+{% endcomment %}
+<div style="display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap;">
+    <a href="{% url 'instructor_dashboard' %}"
+       style="padding: 10px 18px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;
+              {% if active == 'courses' %}background: var(--navy-blue); color: white;{% else %}background: white; color: var(--navy-blue); box-shadow: 0 2px 8px rgba(0,0,0,0.08);{% endif %}">
+        📚 My Courses
+    </a>
+    <a href="{% url 'instructor_students' %}"
+       style="padding: 10px 18px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;
+              {% if active == 'my_students' %}background: var(--navy-blue); color: white;{% else %}background: white; color: var(--navy-blue); box-shadow: 0 2px 8px rgba(0,0,0,0.08);{% endif %}">
+        👨‍🎓 My Students
+    </a>
+    <a href="{% url 'instructor_approvals' %}"
+       style="padding: 10px 18px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px; position: relative;
+              {% if active == 'tasks' %}background: var(--navy-blue); color: white;{% else %}background: white; color: var(--navy-blue); box-shadow: 0 2px 8px rgba(0,0,0,0.08);{% endif %}">
+        📝 My Tasks
+        {% with badge_total=pending_approvals_count|add:pending_assigned_tasks_count %}
+        {% if badge_total %}
+            <span style="background: #f44336; color: white; border-radius: 10px; padding: 1px 7px; font-size: 11px; margin-left: 6px;">{{ badge_total }}</span>
+        {% endif %}
+        {% endwith %}
+    </a>
+    <a href="{% url 'instructor_survey' %}"
+       style="padding: 10px 18px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;
+              {% if active == 'survey' %}background: var(--navy-blue); color: white;{% else %}background: white; color: var(--navy-blue); box-shadow: 0 2px 8px rgba(0,0,0,0.08);{% endif %}">
+        ⭐ My Ratings
+    </a>
+    <a href="{% url 'instructor_course_outline' %}"
+       style="padding: 10px 18px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;
+              {% if active == 'outline' %}background: var(--navy-blue); color: white;{% else %}background: white; color: var(--navy-blue); box-shadow: 0 2px 8px rgba(0,0,0,0.08);{% endif %}">
+        📖 Course Outline
+    </a>
+</div>
